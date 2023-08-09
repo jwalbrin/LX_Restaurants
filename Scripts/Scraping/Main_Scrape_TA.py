@@ -11,8 +11,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.firefox.options import Options
 
 # Input, output paths 
-name_link_data = "/home/jon/GitRepos/gRATE/Temp/LX_AllRestaurantNamesLinks_TA"
-output_path = "/home/jon/GitRepos/gRATE/Temp/"
+name_link_data = ("/home/jon/GitRepos/LX_Restaurants/Output/" +
+                  "LX_AllRestaurantNamesLinks_TA")
+output_path = "/home/jon/GitRepos/LX_Restaurants/Output/FileParts/"
 output_name = "LX_RestaurantData_TA"
 
 max_reviews = 50 # Max n most recent reviews per restaurant
