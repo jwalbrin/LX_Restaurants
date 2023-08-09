@@ -1,14 +1,21 @@
 # Merge and format scraped part files
-# Note: Point to directory that ONLY contains desired files to be merged!!!
+# Note: Point to directory that ONLY contains desired files to be merged
 
 import numpy as np
 import pandas as pd
 import os
 import pickle
 
+#--- User settings
 input_path = "/home/jon/GitRepos/LX_Restaurants/Output/FileParts/"
 output_path = "/home/jon/GitRepos/LX_Restaurants/Output/Merged/"
 file_prefix = "LX_RestaurantData_TA_mn10_mx50_"
+
+#--- MAIN
+
+# Make output directory
+if os.path.isdir(output_path) == False:
+    os.mkdir(output_path)
 
 # Ascending sort part file names
 pf_names = os.listdir(input_path)
