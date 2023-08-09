@@ -8,6 +8,7 @@ __pycache__/
 
 # Custom
 Output/
+Dev/
 
 # Distribution / packaging
 .Python
