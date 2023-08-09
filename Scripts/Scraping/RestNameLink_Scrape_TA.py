@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 #--- Settings 
 url = "https://www.tripadvisor.com/Restaurants-g189158-Lisbon_Lisbon_District_Central_Portugal.html"
 
-output_path = "/home/jon/GitRepos/gRATE/Temp/"
+output_path = "/home/jon/GitRepos/LX_Restaurants/Output/"
 output_name = "LX_AllRestaurantNamesLinks_TA"
 
 run_silent = 1 # 1 = don't show scraping

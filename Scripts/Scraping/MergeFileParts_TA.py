@@ -6,8 +6,8 @@ import pandas as pd
 import os
 import pickle
 
-input_path = "/home/jon/GitRepos/gRATE/Temp/FileParts/"
-output_path = "/home/jon/GitRepos/gRATE/Temp/Merged/"
+input_path = "/home/jon/GitRepos/LX_Restaurants/Output/FileParts/"
+output_path = "/home/jon/GitRepos/LX_Restaurants/Output/Merged/"
 file_prefix = "LX_RestaurantData_TA_mn10_mx50_"
 
 # Ascending sort part file names
