@@ -85,6 +85,9 @@ top_n = np.arange(0,30)
 label_type = "Cuisine"
 countplot_unique_labels(words, counts,top_n,label_type)
 
+# Price range
+price_range = df_
+
 
 #--- Ratings: Frequencies
 rating_names = ["AvgRating","FoodRating", "ServiceRating",
