@@ -51,6 +51,13 @@ def countplot_unique_labels(words, counts,top_n,label_type):
     bars.set_ylabel("Count")
     bars.set_title("%i most frequent %s labels (of %i)" 
                    % (len(top_n), label_type, len(words)))
+    
+def hist_with_percentiles(data, label, percentiles):
+    hist = sns.histplot(data, binrange = (0,200))
+    hist.set_title(label)
+    for p in percentiles:
+        prcntl = np.percentile(data[~np.isnan(data)], p) 
+        plt.axvline(prcntl, 0,1, c = 'r', alpha = 0.5)
 #--- MAIN
 
 # Load data
@@ -85,9 +92,20 @@ top_n = np.arange(0,30)
 label_type = "Cuisine"
 countplot_unique_labels(words, counts,top_n,label_type)
 
-# Price range
-price_range = df_
+#--- Price range 
+# Format min, max, and mid (mean of both) prices
+price_range = list(df.PriceRange)
+min_max_price = [(np.nan,np.nan) if i is None else 
+                 (int(i.split("€")[1][:-3].replace(",", "")), 
+                  int(i.split("€")[2].replace(",", "")))
+                 for i in price_range]
+min_max_price = np.array(min_max_price)
+mid_price = np.nanmean(min_max_price, axis = 1)
 
+# Plot        
+hist_with_percentiles(mid_price, "Mid Price", [33,66])
+hist_with_percentiles(min_max_price[:,0], "Min Price", [33,66])
+hist_with_percentiles(min_max_price[:,1], "Max Price", [33,66])
 
 #--- Ratings: Frequencies
 rating_names = ["AvgRating","FoodRating", "ServiceRating",
