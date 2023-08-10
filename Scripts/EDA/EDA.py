@@ -53,6 +53,7 @@ def countplot_unique_labels(words, counts,top_n,label_type):
                    % (len(top_n), label_type, len(words)))
     
 def hist_with_percentiles(data, label, percentiles):
+    fig, ax = plt.subplots()
     hist = sns.histplot(data, binrange = (0,200))
     hist.set_title(label)
     for p in percentiles:
