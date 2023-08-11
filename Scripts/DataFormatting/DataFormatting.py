@@ -4,12 +4,13 @@
 main - PK, Name, SkipCode, TotalReviews, 5 ratings, cuisine_FK (to cuisines PK),
        special
 
-long_string_info - main_FK, URL, street_address, about
 review - main_FK, title, date, rating, text
 cuisine - main_FK, 110 cols
 Special diets - main_FK, 4 cols
 Meals - main_FK, 6 cols
 Features - main_FK, 40 cols
+
+long_string_info - main_FK, URL, street_address, about
 tags_review - 
 PriceRange - main_FK, min, max, mm_mean, 3 budgets, 4 budgets (explore a little more)
 
@@ -142,7 +143,49 @@ save_binary_mat_df(
 #                             % out_head_str)       
 # cuis_dict = load_binary_mat_df(pickle_path)
 
-#---
+#--- Special diets
+
+df_col = df_scr.SpecialDiets
+out_head_str = "Diet"
+
+ulabels = split_sort_unique_labels(df_col)
+binary_matrix = binary_label_output(df_col,ulabels)
+save_binary_mat_df(
+    df_col, ulabels, binary_matrix, 
+    out_head_str, output_path
+    )
+
+#--- Meals
+
+df_col = df_scr.Meals
+out_head_str = "Meal"
+
+ulabels = split_sort_unique_labels(df_col)
+binary_matrix = binary_label_output(df_col,ulabels)
+save_binary_mat_df(
+    df_col, ulabels, binary_matrix, 
+    out_head_str, output_path
+    )
+
+#--- Features
+
+df_col = df_scr.Features
+out_head_str = "RestFeat"
+
+ulabels = split_sort_unique_labels(df_col)
+binary_matrix = binary_label_output(df_col,ulabels)
+save_binary_mat_df(
+    df_col, ulabels, binary_matrix, 
+    out_head_str, output_path
+    )
+
+# Load pickle df and col_key
+pickle_path = os.path.join(output_path,
+                            "%s_Data.pickle" 
+                            % out_head_str)       
+test_dict = load_binary_mat_df(pickle_path)
+df_test = test_dict["df"]
+ulab_test = test_dict["col_key"]
 
 #--- Review data
 
