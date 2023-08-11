@@ -5,11 +5,12 @@ main - PK, Name, SkipCode, TotalReviews, 5 ratings, cuisine_FK (to cuisines PK),
        special
 
 long_string_info - main_FK, URL, street_address, about
-review - main_FK, tag, title, date, rating, text
+review - main_FK, title, date, rating, text
 cuisine - main_FK, 110 cols
 Special diets - main_FK, 4 cols
 Meals - main_FK, 6 cols
 Features - main_FK, 40 cols
+tags_review - 
 PriceRange - main_FK, min, max, mm_mean, 3 budgets, 4 budgets (explore a little more)
 
 """
@@ -21,6 +22,7 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
+from datetime import datetime
 
 #--- User settings
 data_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Merged/" + 
@@ -82,7 +84,7 @@ def save_binary_mat_df(
                   for i in np.arange(0,len(ulabels))]
     df_out = pd.DataFrame(
              binary_matrix, 
-             columns = col_names).reset_index(names = "Main_PK")
+             columns = col_names).reset_index(names = "Main_FK")
             
     # Pickle data 
     if (len(df_col) == len(df_out) and 
@@ -107,6 +109,12 @@ def load_binary_mat_df(pickle_path):
         lbm_dict["col_key"] = pickle.load(f)
     return lbm_dict
 
+def load_pickled_df(pickle_path):
+    # Simple load single pickled df
+    with open(pickle_path,"rb") as f:
+         df = pickle.load(f)
+    return df
+
 #--- MAIN
 
 # Make out_path
@@ -117,7 +125,6 @@ if os.path.isdir(output_path) == False:
 df_scr = pd.read_pickle(data_path)
 
 #--- Cuisine data
-
 
 df_col = df_scr.Cuisines
 out_head_str = "Cuis"
@@ -131,6 +138,89 @@ save_binary_mat_df(
 
 # # Load pickle df and col_key
 # pickle_path = os.path.join(output_path,
-#                            "%s_Data.pickle" 
-#                            % out_head_str)       
+#                             "%s_Data.pickle" 
+#                             % out_head_str)       
 # cuis_dict = load_binary_mat_df(pickle_path)
+
+#---
+
+#--- Review data
+
+""" Unravel lists so that there are that there will now be
+M * N indices/ rows where:
+M is restaurants with valid reviews
+N is valid reviews per restaurant
+In short, around 69k rows
+DOes this for review titles, dates, ratings, texts
+Also for: 
+a) main_FK(row index for df_scr / df_main, 0-4900ish)
+b) rev_idx (review index per restaurant, 0-49ish)
+"""
+
+# Subset rows with valid reviews, review columns only
+df_rev = df_scr[df_scr.SkipCode==0]
+df_rev = df_rev[["ReviewTitles", "ReviewDates", 
+                 "ReviewRatings", "ReviewTexts"]]
+
+# unravel data for each row in df_rev
+main_FK, rev_num = [], []
+titles, dates, ratings, texts = [],[],[],[]
+
+_ = [(
+      main_FK.append(np.repeat(i,len(df_rev.loc[i].ReviewRatings))),
+      rev_num.append(np.arange(len(df_rev.loc[i].ReviewRatings))),
+      titles.append(df_rev.loc[i].ReviewTitles),
+      dates.append(df_rev.loc[i].ReviewDates),
+      ratings.append(df_rev.loc[i].ReviewRatings),
+      texts.append(df_rev.loc[i].ReviewTexts)     
+     )
+     for i in df_rev.index]
+
+# Flatten into 1D arrays
+main_FK = np.hstack(np.asarray(main_FK))
+rev_num = np.hstack(np.asarray(rev_num))
+titles = np.hstack(np.asarray(titles))
+texts = np.hstack(np.asarray(texts))
+
+# Format ratings
+ratings = np.hstack(np.asarray(ratings)) / 10
+ratings = ratings.astype("int")
+
+# Format dates
+dates = np.hstack(np.asarray(dates))
+dates = [datetime.strptime(dates[i], '%B %d, %Y') if dates[i] != " " else datetime.strptime("January 1, 1970", '%B %d, %Y')
+     for i in np.arange(len(dates))]
+
+
+
+# Pickle
+df_out = pd.DataFrame({"main_FK" : main_FK, 
+                       "rev_num": rev_num,
+                       "rev_title": titles,
+                       "rev_date": dates,
+                       "rev_rating": ratings,
+                       "rev_text": texts}).reset_index(names = "rev_idx")
+
+pickle_path = os.path.join(output_path,"Rev_Data.pickle")
+with open(pickle_path,"wb") as f:
+    pickle.dump(df_out, f)
+
+# df_col = df_scr.ReviewDates[df_scr.SkipCode==0]
+# main_FK = []
+# rev_idx = []
+# _ = [(main_FK.append(np.repeat(i,len(df_col[i]))),
+#      rev_idx.append(np.arange(len(df_col[i]))))
+#      for i in df_col.index]
+# main_FK = np.hstack(np.asarray(main_FK))
+# rev_idx = np.hstack(np.asarray(rev_idx))
+
+
+
+
+
+
+
+
+# get non skip row indices, append for all repeats, tuple with the counts for repeats
+# 
+
