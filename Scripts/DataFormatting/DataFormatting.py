@@ -116,6 +116,15 @@ def load_pickled_df(pickle_path):
          df = pickle.load(f)
     return df
 
+def n_perc_vals(data,n_bounds):
+    """ Returns values for each linearly spaced percentile
+    interval (e.g. 5 = 0,25,50,75,100)
+    """
+    b = np.linspace(0,100,n_bounds)
+    b_vals = [np.percentile(data[~np.isnan(data)], i)
+              for i in b]
+    return b_vals
+
 #--- MAIN
 
 # Make out_path
@@ -248,22 +257,42 @@ pickle_path = os.path.join(output_path,"Rev_Data.pickle")
 with open(pickle_path,"wb") as f:
     pickle.dump(df_out, f)
 
-# df_col = df_scr.ReviewDates[df_scr.SkipCode==0]
-# main_FK = []
-# rev_idx = []
-# _ = [(main_FK.append(np.repeat(i,len(df_col[i]))),
-#      rev_idx.append(np.arange(len(df_col[i]))))
-#      for i in df_col.index]
-# main_FK = np.hstack(np.asarray(main_FK))
-# rev_idx = np.hstack(np.asarray(rev_idx))
+#--- Price data
 
+# Format min, max, and mid (mean of both) prices
+price_range = list(df_scr.PriceRange)
+min_max_price = [(np.nan,np.nan) if i is None else 
+                 (int(i.split("€")[1][:-3].replace(",", "")), 
+                  int(i.split("€")[2].replace(",", "")))
+                 for i in price_range]
+min_max_price = np.array(min_max_price)
+mid_price = np.nanmean(min_max_price, axis = 1)
 
+# Percentile boundaries for price ranges
 
+# # 4 budgets
+# data = mid_price
+# b_vals = n_perc_vals(data, 4 + 1)
 
+# make dataframe
 
+df_out = pd.DataFrame({"min_price": min_max_price[:,0],
+                       "max_price": min_max_price[:,1],
+                       "mid_price": mid_price,
+                       "mid_cat_4": mid_price
+                       }
+                      )
 
+# a= df_out.mid_cat_4.apply(lambda x: 
+#                         1
+#                        if x > b_vals[0] and x < b_vals[1] 
+#                        elif 
+#                        else x
+#                        )
+# a.head(14)
 
+# cat_labs = np.zeros(len(data))
+# a = [i i+1 if data[i]
+#      for i in np.arange(len(b_vals)-1)]
 
-# get non skip row indices, append for all repeats, tuple with the counts for repeats
-# 
 
