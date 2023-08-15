@@ -26,7 +26,10 @@ import pickle
 import numpy as np
 import pandas as pd
 from datetime import datetime
-from dataformatting_functions import *
+import sys
+scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
+sys.path.append(scripts_path)
+from Functions.dataformatting import *
 
 #--- User settings
 data_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Merged/" + 
