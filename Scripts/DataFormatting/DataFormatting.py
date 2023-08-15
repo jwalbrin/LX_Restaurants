@@ -1,129 +1,38 @@
 # 
 """
+Takes scraped data df and outputs 8 formatted dataframes:
 
-main - PK, Name, SkipCode, TotalReviews, 5 ratings, cuisine_FK (to cuisines PK),
-       special
+1. Main (Restaurant info): Main_PK, Name, SkipCode, TotalReviewsEN, AvgRating,
+                           Food, service, Value, & Atmosphere sub-ratings
+2. String (longer text info): Main_FK, URL, Address, About, ReviewTags
+3. Price (food costs): Main_FK, min, max and mid (mean of min-max),
+                       3 budget categories based on quantile ranges 
+                       (e.g. low, mid, highest third of prices) 
+                       for each min, max, mid
+                       4 budget categories (as above)
 
-review - main_FK, title, date, rating, text
-cuisine - main_FK, 110 cols
-Special diets - main_FK, 4 cols
-Meals - main_FK, 6 cols
-Features - main_FK, 40 cols
-
-long_string_info - main_FK, URL, street_address, about
-tags_review - 
-PriceRange - main_FK, min, max, mm_mean, 3 budgets, 4 budgets (explore a little more)
-
+4. Cuisine (binary coding of unique cuisine labels per restaurant, e.g.
+            40 unique cuisine labels denoted with 1s or 0s) + Main_FK
+5. Diet (binary coding as above)
+6. Meal ("")
+7. RestFeat (restaurant features; "")   
+8. Review (unravelled reviews across resturants): titles, dates, ratings, 
+            review text, along with Main_FK, review index (0 - ~69k reviews),
+            rev_num (nth review per given restaurant (e.g. 0-49))
 """
 
 import os
 import pickle
 import numpy as np
 import pandas as pd
-import seaborn as sns
-from matplotlib import pyplot as plt
-from sklearn.feature_extraction.text import CountVectorizer
 from datetime import datetime
+from dataformatting_functions import *
 
 #--- User settings
 data_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Merged/" + 
              "LX_RestaurantData_TA_mn10_mx50_Merged_0_4900")
 
 output_path = "/home/jon/GitRepos/LX_Restaurants/Output/Formatted/"
-
-#--- Functions
-
-def split_sort_unique_labels(df_col):
-    """
-    a. Split multi-label strings with "|" separator, append
-    to long list with all labels (incl. duplicates)
-    b. Set unique values, replace "_", asecnd sort
-    output is all unique labels in alphabetical order
-    """
-    # Split multi-label strings
-    temp_labels = df_col[df_col.notnull()]
-    su_labels = []
-    temp = [su_labels.append(j.replace(" ", "_")) 
-            for i in list(temp_labels) 
-            for j in i.split(" | ")]
-    
-    # set unique values
-    su_labels = list(set(su_labels))
-    su_labels = [i.replace("_", " ")
-                 for i in su_labels]
-    su_labels.sort()   
-    return su_labels
-
-def binary_label_output(df_col, u_labels):
-    """ 
-    Outputs a sample * u_label binary matrix
-    (1 if label is present for that sample)
-    """
-
-    # Get label strings for each sample as a list
-    all_str_labels = list(df_col)
-    all_str_labels = ["None" if i is None else i
-                     for i in all_str_labels]
-    
-    # Make sample * u_label matrix
-    output = np.zeros((len(all_str_labels),len(u_labels)),dtype = "int")
-    for u_idx, u in enumerate(u_labels):
-        output[:,u_idx] = np.array([1 if u in i else 0 
-                                    for i in all_str_labels])  
-    return output
-
-def save_binary_mat_df(
-                       df_col, ulabels, binary_matrix, 
-                       out_head_str, output_path):    
-    """ 
-    Pickles binary matrix as dataframe along with column keys for
-    the corresponding labels
-    Exception if indices of old and new df are not identical
-    """
-    # Create dataframe + column_name key
-    col_names = [("%s_%i" % (out_head_str,i)) 
-                  for i in np.arange(0,len(ulabels))]
-    df_out = pd.DataFrame(
-             binary_matrix, 
-             columns = col_names).reset_index(names = "Main_FK")
-            
-    # Pickle data 
-    if (len(df_col) == len(df_out) and 
-        np.sum(df_col.index - df_out.index) == 0):
-    
-        pickle_path = os.path.join(output_path,
-                                   "%s_Data.pickle" 
-                                   % out_head_str)
-        col_name_key = ulabels 
-        with open(pickle_path,"wb") as f:
-            pickle.dump(df_out, f)
-            pickle.dump(col_name_key, f)        
-    else:
-        raise Exception("Data not saved! New df index doesn't match main index.")
-
-def load_binary_mat_df(pickle_path):
-    """ Load pickled df and col_key as dict
-    """
-    lbm_dict = {}
-    with open(pickle_path, "rb") as f:
-        lbm_dict["df"] = pickle.load(f)
-        lbm_dict["col_key"] = pickle.load(f)
-    return lbm_dict
-
-def load_pickled_df(pickle_path):
-    # Simple load single pickled df
-    with open(pickle_path,"rb") as f:
-         df = pickle.load(f)
-    return df
-
-def n_perc_vals(data,n_bounds):
-    """ Returns values for each linearly spaced percentile
-    interval (e.g. 5 = 0,25,50,75,100)
-    """
-    b = np.linspace(0,100,n_bounds)
-    b_vals = [np.percentile(data[~np.isnan(data)], i)
-              for i in b]
-    return b_vals
 
 #--- MAIN
 
@@ -134,23 +43,76 @@ if os.path.isdir(output_path) == False:
 # Load scraped data
 df_scr = pd.read_pickle(data_path)
 
+#--- Main data
+
+# Decimalize sub-ratings
+df_out = df_scr[["FoodRating", 
+                 "ServiceRating", "ValueRating",
+                 "AtmosphereRating"]] / 10
+
+# Concatenate Main restaturant data and decimalized sub-ratings
+df_out = pd.concat((df_scr[["Name", "SkipCode", "TotalReviewsEN", 
+                 "AvgRating"]].reset_index(names = "Main_PK"),df_out),
+              axis = 1)
+
+# Pickle
+pickle_path = os.path.join(output_path,"Main_Data.pickle") 
+pickle_df_safe(df_scr, df_out, pickle_path)
+
+#--- Long string data (URL, address, about, ReviewTags)
+
+df_out = df_scr[["URL", "Address", "About", "ReviewTags"]].reset_index(
+                                                           names = "main_FK")
+# Pickle
+pickle_path = os.path.join(output_path,"String_Data.pickle") 
+pickle_df_safe(df_scr, df_out, pickle_path)
+
+#--- Price data
+
+# Format min, max, and mid (mean of both) prices
+price_range = list(df_scr.PriceRange)
+min_max_price = [(np.nan,np.nan) if i is None else 
+                 (int(i.split("€")[1][:-3].replace(",", "")), 
+                  int(i.split("€")[2].replace(",", "")))
+                 for i in price_range]
+min_max_price = np.array(min_max_price)
+mid_price = np.nanmean(min_max_price, axis = 1)
+
+""" Assign price columns to df_out
+Discretize price values - 3 or 4 categorical labels based on quantile cuts
+"""
+df_out = pd.DataFrame({
+                       "mid_price": mid_price,
+                       "mid_cat_3": pd.qcut(mid_price,3, labels = False),
+                       "mid_cat_4": pd.qcut(mid_price,4, labels = False),
+                       "min_price": min_max_price[:,0],
+                       "min_cat_3": pd.qcut(min_max_price[:,0],3, 
+                                            labels = False),
+                       "min_cat_4": pd.qcut(min_max_price[:,0],4, 
+                                            labels = False),
+                       "max_price": min_max_price[:,1],
+                       "max_cat_3": pd.qcut(min_max_price[:,1],3, 
+                                            labels = False),
+                       "max_cat_4": pd.qcut(min_max_price[:,1],4, 
+                                            labels = False),
+                       }
+                      ).reset_index(names = "main_FK")
+
+# Pickle
+pickle_path = os.path.join(output_path,"Price_Data.pickle") 
+pickle_df_safe(df_scr, df_out, pickle_path)
+
 #--- Cuisine data
 
 df_col = df_scr.Cuisines
-out_head_str = "Cuis"
+out_head_str = "Cuisine"
 
 ulabels = split_sort_unique_labels(df_col)
 binary_matrix = binary_label_output(df_col,ulabels)
-save_binary_mat_df(
+save_bin_pickled_df_safe(
     df_col, ulabels, binary_matrix, 
     out_head_str, output_path
     )
-
-# # Load pickle df and col_key
-# pickle_path = os.path.join(output_path,
-#                             "%s_Data.pickle" 
-#                             % out_head_str)       
-# cuis_dict = load_binary_mat_df(pickle_path)
 
 #--- Special diets
 
@@ -159,7 +121,7 @@ out_head_str = "Diet"
 
 ulabels = split_sort_unique_labels(df_col)
 binary_matrix = binary_label_output(df_col,ulabels)
-save_binary_mat_df(
+save_bin_pickled_df_safe(
     df_col, ulabels, binary_matrix, 
     out_head_str, output_path
     )
@@ -171,7 +133,7 @@ out_head_str = "Meal"
 
 ulabels = split_sort_unique_labels(df_col)
 binary_matrix = binary_label_output(df_col,ulabels)
-save_binary_mat_df(
+save_bin_pickled_df_safe(
     df_col, ulabels, binary_matrix, 
     out_head_str, output_path
     )
@@ -183,18 +145,10 @@ out_head_str = "RestFeat"
 
 ulabels = split_sort_unique_labels(df_col)
 binary_matrix = binary_label_output(df_col,ulabels)
-save_binary_mat_df(
+save_bin_pickled_df_safe(
     df_col, ulabels, binary_matrix, 
     out_head_str, output_path
     )
-
-# Load pickle df and col_key
-pickle_path = os.path.join(output_path,
-                            "%s_Data.pickle" 
-                            % out_head_str)       
-test_dict = load_binary_mat_df(pickle_path)
-df_test = test_dict["df"]
-ulab_test = test_dict["col_key"]
 
 #--- Review data
 
@@ -243,8 +197,6 @@ dates = np.hstack(np.asarray(dates))
 dates = [datetime.strptime(dates[i], '%B %d, %Y') if dates[i] != " " else datetime.strptime("January 1, 1970", '%B %d, %Y')
      for i in np.arange(len(dates))]
 
-
-
 # Pickle
 df_out = pd.DataFrame({"main_FK" : main_FK, 
                        "rev_num": rev_num,
@@ -253,46 +205,30 @@ df_out = pd.DataFrame({"main_FK" : main_FK,
                        "rev_rating": ratings,
                        "rev_text": texts}).reset_index(names = "rev_idx")
 
-pickle_path = os.path.join(output_path,"Rev_Data.pickle")
+pickle_path = os.path.join(output_path,"Review_Data.pickle")
 with open(pickle_path,"wb") as f:
     pickle.dump(df_out, f)
 
-#--- Price data
+#--- Load checks
 
-# Format min, max, and mid (mean of both) prices
-price_range = list(df_scr.PriceRange)
-min_max_price = [(np.nan,np.nan) if i is None else 
-                 (int(i.split("€")[1][:-3].replace(",", "")), 
-                  int(i.split("€")[2].replace(",", "")))
-                 for i in price_range]
-min_max_price = np.array(min_max_price)
-mid_price = np.nanmean(min_max_price, axis = 1)
+# Binary data
+print("Data checks:")
+data_names_bin = ["Cuisine", "Diet", "Meal", "RestFeat"]
+for d in data_names_bin:    
+    check_dict = load_bin_pickled_df(
+                 os.path.join(output_path,"%s_Data.pickle" % d))
+    print("df %s shape: %i %i" % (d, check_dict["df"].shape[0],
+          check_dict["df"].shape[1]))
+    print("%s labels: %i + FK" % (d, len(check_dict["col_key"])))
+del check_dict
 
-# Percentile boundaries for price ranges
-
-# # 4 budgets
-# data = mid_price
-# b_vals = n_perc_vals(data, 4 + 1)
-
-# make dataframe
-
-df_out = pd.DataFrame({"min_price": min_max_price[:,0],
-                       "max_price": min_max_price[:,1],
-                       "mid_price": mid_price,
-                       "mid_cat_4": mid_price
-                       }
-                      )
-
-# a= df_out.mid_cat_4.apply(lambda x: 
-#                         1
-#                        if x > b_vals[0] and x < b_vals[1] 
-#                        elif 
-#                        else x
-#                        )
-# a.head(14)
-
-# cat_labs = np.zeros(len(data))
-# a = [i i+1 if data[i]
-#      for i in np.arange(len(b_vals)-1)]
+# Other data
+data_names = ["Main", "String", "Price", "Review"]
+for d in data_names:    
+    check_df = load_pickled_df(
+                 os.path.join(output_path,"%s_Data.pickle" % d))
+    print("df %s shape: %i %i" % (d, check_df.shape[0],
+          check_df.shape[1]))
+del check_df
 
 
