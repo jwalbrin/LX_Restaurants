@@ -6,7 +6,10 @@ import pandas as pd
 import seaborn as sns
 from matplotlib import pyplot as plt
 from sklearn.feature_extraction.text import CountVectorizer
-from eda import *
+import sys
+scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
+sys.path.append(scripts_path)
+from Functions.eda import *
 
 #--- User settings
 data_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Merged/" + 
