@@ -2,10 +2,10 @@
 """
 Takes scraped data df and outputs 8 formatted dataframes:
 
-1. Main (Restaurant info): Main_PK, Name, SkipCode, TotalReviewsEN, AvgRating,
+1. Main (Restaurant info): MainPK, Name, SkipCode, TotalReviewsEN, AvgRating,
                            Food, service, Value, & Atmosphere sub-ratings
-2. String (longer text info): Main_FK, URL, Address, About, ReviewTags
-3. Price (food costs): Main_FK, min, max and mid (mean of min-max),
+2. String (longer text info): MainFK, URL, Address, About, ReviewTags
+3. Price (food costs): MainFK, min, max and mid (mean of min-max),
                        3 budget categories based on quantile ranges 
                        (e.g. low, mid, highest third of prices) 
                        for each min, max, mid
@@ -55,7 +55,7 @@ df_out = df_scr[["FoodRating",
 
 # Concatenate Main restaturant data and decimalized sub-ratings
 df_out = pd.concat((df_scr[["Name", "SkipCode", "TotalReviewsEN", 
-                 "AvgRating"]].reset_index(names = "Main_PK"),df_out),
+                 "AvgRating"]].reset_index(names = "MainPK"),df_out),
               axis = 1)
 
 # Pickle
@@ -65,7 +65,7 @@ pickle_df_safe(df_scr, df_out, pickle_path)
 #--- Long string data (URL, address, about, ReviewTags)
 
 df_out = df_scr[["URL", "Address", "About", "ReviewTags"]].reset_index(
-                                                           names = "main_FK")
+                                                           names = "MainFK")
 # Pickle
 pickle_path = os.path.join(output_path,"String_Data.pickle") 
 pickle_df_safe(df_scr, df_out, pickle_path)
@@ -85,21 +85,21 @@ mid_price = np.nanmean(min_max_price, axis = 1)
 Discretize price values - 3 or 4 categorical labels based on quantile cuts
 """
 df_out = pd.DataFrame({
-                       "mid_price": mid_price,
-                       "mid_cat_3": pd.qcut(mid_price,3, labels = False),
-                       "mid_cat_4": pd.qcut(mid_price,4, labels = False),
-                       "min_price": min_max_price[:,0],
-                       "min_cat_3": pd.qcut(min_max_price[:,0],3, 
+                       "MidPrice": mid_price,
+                       "MidCat_3": pd.qcut(mid_price,3, labels = False),
+                       "MidCat_4": pd.qcut(mid_price,4, labels = False),
+                       "MinPrice": min_max_price[:,0],
+                       "MinCat_3": pd.qcut(min_max_price[:,0],3, 
                                             labels = False),
-                       "min_cat_4": pd.qcut(min_max_price[:,0],4, 
+                       "MinCat_4": pd.qcut(min_max_price[:,0],4, 
                                             labels = False),
-                       "max_price": min_max_price[:,1],
-                       "max_cat_3": pd.qcut(min_max_price[:,1],3, 
+                       "MaxPrice": min_max_price[:,1],
+                       "MaxCat_3": pd.qcut(min_max_price[:,1],3, 
                                             labels = False),
-                       "max_cat_4": pd.qcut(min_max_price[:,1],4, 
+                       "MaxCat_4": pd.qcut(min_max_price[:,1],4, 
                                             labels = False),
                        }
-                      ).reset_index(names = "main_FK")
+                      ).reset_index(names = "MainFK")
 
 # Pickle
 pickle_path = os.path.join(output_path,"Price_Data.pickle") 
@@ -201,12 +201,12 @@ dates = [datetime.strptime(dates[i], '%B %d, %Y') if dates[i] != " " else dateti
      for i in np.arange(len(dates))]
 
 # Pickle
-df_out = pd.DataFrame({"main_FK" : main_FK, 
-                       "rev_num": rev_num,
-                       "rev_title": titles,
-                       "rev_date": dates,
-                       "rev_rating": ratings,
-                       "rev_text": texts}).reset_index(names = "rev_idx")
+df_out = pd.DataFrame({"MainFK" : main_FK, 
+                       "RevNum": rev_num,
+                       "RevTitle": titles,
+                       "RevDate": dates,
+                       "RevRating": ratings,
+                       "RevText": texts}).reset_index(names = "RevIdx")
 
 pickle_path = os.path.join(output_path,"Review_Data.pickle")
 with open(pickle_path,"wb") as f:
