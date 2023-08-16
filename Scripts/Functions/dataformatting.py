@@ -109,3 +109,30 @@ def n_perc_vals(data,n_bounds):
     b_vals = [np.percentile(data[~np.isnan(data)], i)
               for i in b]
     return b_vals
+
+def quantile_label_no_outliers_idx(val, percentile, qlab):
+    """ Create quantile labels to values below percentile and assign 
+    values above with inf
+    val = mid_price
+    percentile = 97.5
+    qlab = 3 (new labels)
+    
+    a. Get indices of numerical values >= given percentile
+    b. Nan them (temporarily)
+    c. Apply pd.qcut
+    d. Assign inf to outlier values
+    """
+    # Indices of values >= percentile
+    val = np.copy(val)
+    prcntl = np.nanpercentile(val,percentile)
+    o_i = np.where(val >= prcntl)[0]
+    
+    # Nan    
+    val[o_i] = np.nan
+    
+    # Qcut, set outliers as inf
+    qcut = pd.qcut(val,qlab, labels = False)
+    qcut[o_i] = np.Inf    
+    print("%i values >= %1.1f percentile" % (len(o_i),
+        percentile))
+    return qcut

@@ -81,23 +81,65 @@ min_max_price = [(np.nan,np.nan) if i is None else
 min_max_price = np.array(min_max_price)
 mid_price = np.nanmean(min_max_price, axis = 1)
 
+
+def quantile_label_no_outliers_idx(val, percentile, qlab):
+    """ Create quantile labels to values below percentile and assign 
+    values above with inf
+    val = mid_price
+    percentile = 97.5
+    qlab = 3 (new labels)
+    
+    a. Get indices of numerical values >= given percentile
+    b. Nan them (temporarily)
+    c. Apply pd.qcut
+    d. Assign inf to outlier values
+    """
+    # Indices of values >= percentile
+    val = np.copy(val)
+    prcntl = np.nanpercentile(val,percentile)
+    o_i = np.where(val >= prcntl)[0]
+    
+    # Nan    
+    val[o_i] = np.nan
+    
+    # Qcut, set outliers as inf
+    qcut = pd.qcut(val,qlab, labels = False)
+    qcut[o_i] = np.Inf    
+    print("%i values >= %1.1f percentile" % (len(o_i),
+        percentile))
+    return qcut
+
+# Create qcut labels after handling outliers (values > 97.5 percentile)
+mid_cat_2 = quantile_label_no_outliers_idx(mid_price, 97.5, 2)
+mid_cat_3 = quantile_label_no_outliers_idx(mid_price, 97.5, 3)
+mid_cat_4 = quantile_label_no_outliers_idx(mid_price, 97.5, 4)
+
+min_cat_2 = quantile_label_no_outliers_idx(min_max_price[:,0], 97.5, 2)
+min_cat_3 = quantile_label_no_outliers_idx(min_max_price[:,0], 97.5, 3)
+min_cat_4 = quantile_label_no_outliers_idx(min_max_price[:,0], 97.5, 4)
+
+max_cat_2 = quantile_label_no_outliers_idx(min_max_price[:,1], 97.5, 2)
+max_cat_3 = quantile_label_no_outliers_idx(min_max_price[:,1], 97.5, 3)
+max_cat_4 = quantile_label_no_outliers_idx(min_max_price[:,1], 97.5, 4)
+
 """ Assign price columns to df_out
-Discretize price values - 3 or 4 categorical labels based on quantile cuts
-"""
+Discretize price values - 3 or 4 categorical labels based on quantile cuts"""
+
 df_out = pd.DataFrame({
                        "MidPrice": mid_price,
-                       "MidCat_3": pd.qcut(mid_price,3, labels = False),
-                       "MidCat_4": pd.qcut(mid_price,4, labels = False),
+                       "MidCat_2": mid_cat_2,
+                       "MidCat_3": mid_cat_3,
+                       "MidCat_4": mid_cat_4,
+                                           
                        "MinPrice": min_max_price[:,0],
-                       "MinCat_3": pd.qcut(min_max_price[:,0],3, 
-                                            labels = False),
-                       "MinCat_4": pd.qcut(min_max_price[:,0],4, 
-                                            labels = False),
+                       "MinCat_2": min_cat_2,
+                       "MinCat_3": min_cat_3,
+                       "MinCat_4": min_cat_4,                     
+                       
                        "MaxPrice": min_max_price[:,1],
-                       "MaxCat_3": pd.qcut(min_max_price[:,1],3, 
-                                            labels = False),
-                       "MaxCat_4": pd.qcut(min_max_price[:,1],4, 
-                                            labels = False),
+                       "MaxCat_2": max_cat_2,
+                       "MaxCat_3": max_cat_3,
+                       "MaxCat_4": max_cat_4,
                        }
                       ).reset_index(names = "MainFK")
 
