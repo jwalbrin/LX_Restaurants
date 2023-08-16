@@ -17,27 +17,14 @@ data_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/")
 #--- MAIN
 
 #--- Functions
-# Get indices for filter lab
-# def get_filt(filt_dict, filt_lab):
-#     """ For subsequent filtering, get: 
-#     a. Sparse binary column for a given filter label from a 
-#     dataset (e.g. "portuguese" column from Cuisine_Data.pickle)
-#     b. The row indices of all 1s from a
-#     """    
-#     # Get filt data name, find column index, get values
-#     filt_name = filt_dict["df"].columns[1].split("_")[0]
-#     targ_id = filt_dict["col_key"].index(filt_lab)
-#     filt_bin = filt_dict["df"][filt_name + "_%i" % targ_id]
-#     filt_idx = np.where(filt_bin==1)[0]
-#     print("Label and column name: %s, %s" % (filt_dict["col_key"][targ_id],
-#           filt_bin.name))
-#     return filt_bin, filt_idx
+
 
 def get_filt(filt_name, filt_lab, data_path):
-    """ For subsequent filtering, get: 
+    """ 
     filt_name = "Cuisine"
     filt_lab = "portuguese"
-    data_path = "/.../GitRepos/LX_Restaurants/Output/Formatted/"    
+    data_path = "/.../GitRepos/LX_Restaurants/Output/Formatted/" 
+    For subsequent filtering, get:   
     a. call load_bin_pickled_df for given filt_name
     b. Sparse binary column for a given filt_lab from a 
     dataset (e.g. "portuguese" column from Cuisine_Data.pickle)
@@ -86,7 +73,7 @@ for ar_i, ar in enumerate(ar_vals):
     temp_len = len(df_rev[(df_rev["MainFK"].isin(filt_i))])
     print("%i star review count: %i" % (ar,temp_len))
 
-#--- Filter Price 
+#--- Filter 3 cat Price 
 price_vals = np.arange(2,-1,-1)
 
 # load Price data
@@ -97,7 +84,7 @@ for pr_i, pr in enumerate(price_vals):
     temp_len = len(df_rev[(df_rev["MainFK"].isin(filt_i))])
     print("%i price cat. review count: %i" % (pr,temp_len))
 
-#--- Filter rating x price
+#--- Filter rating x 3 cat price
 
 for pr_i, pr in enumerate(price_vals):
     filt_i1 = np.where(df_pr.MidCat_3==pr)[0]
@@ -106,8 +93,25 @@ for pr_i, pr in enumerate(price_vals):
         temp_len = len(df_rev[(df_rev["MainFK"].isin(filt_i1)) &
                               (df_rev["MainFK"].isin(filt_i2))])
         print("%i price cat. %i star review count: %i" % (pr,ar,temp_len))
-    
+        
+#--- Filter 2 cat Price 
+price_vals = np.arange(1,-1,-1)
 
+for pr_i, pr in enumerate(price_vals):
+    filt_i = np.where(df_pr.MidCat_2==pr)[0]
+    temp_len = len(df_rev[(df_rev["MainFK"].isin(filt_i))])
+    print("%i price cat. review count: %i" % (pr,temp_len))
+    
+#--- Filter rating x 3 cat price
+
+for pr_i, pr in enumerate(price_vals):
+    filt_i1 = np.where(df_pr.MidCat_2==pr)[0]
+    for ar_i, ar in enumerate(ar_vals):
+        filt_i2 = np.where(df.AvgRating==ar)[0]
+        temp_len = len(df_rev[(df_rev["MainFK"].isin(filt_i1)) &
+                              (df_rev["MainFK"].isin(filt_i2))])
+        print("%i price cat. %i star review count: %i" % (pr,ar,temp_len))
+        
 #--- Filter date
 date_vals = ["2023-01-01 00:00:00","2022-01-01 00:00:00",
              "2021-01-01 00:00:00"]
