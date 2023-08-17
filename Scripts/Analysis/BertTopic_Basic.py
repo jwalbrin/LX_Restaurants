@@ -1,6 +1,7 @@
 
 import os
 import time
+import pickle
 from bertopic import BERTopic
 import sys
 scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
@@ -64,5 +65,5 @@ with open(pickle_path,"wb") as f:
 # # visualize
 # topic_model.visualize_distribution(np.array(df_di.Probability))
 # topic_model.visualize_topics()
-# topic_model.visualize_barchart(top_n_topics=100)
+topic_model.visualize_barchart(top_n_topics=100)
 
