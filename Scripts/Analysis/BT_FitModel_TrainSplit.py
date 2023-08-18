@@ -67,7 +67,7 @@ def std_model(docs, embeddings):
     # topic_model = BERTopic(nr_topics=50, vectorizer_model=vectorizer_model,
     #                        embedding_model= "all-MiniLM-L6-v2").fit(docs,
     #                                                                 embeddings)
-    topic_model = BERTopic(calculate_probabilities= True, nr_topics=50, vectorizer_model=vectorizer_model,
+    topic_model = BERTopic(calculate_probabilities= True, vectorizer_model=vectorizer_model,
                            embedding_model= "all-MiniLM-L6-v2").fit(docs,
                                                                     embeddings)
                               
