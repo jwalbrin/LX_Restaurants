@@ -250,6 +250,9 @@ df_out = pd.DataFrame({"MainFK" : main_FK,
                        "RevRating": ratings,
                        "RevText": texts}).reset_index(names = "RevIdx")
 
+# Remove empty values (wiht no rating)
+df_out = df_out[df_out.RevRating > 0]
+
 pickle_path = os.path.join(output_path,"Review_Data.pickle")
 with open(pickle_path,"wb") as f:
     pickle.dump(df_out, f)
