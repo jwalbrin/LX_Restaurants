@@ -23,7 +23,7 @@ import plotly.io as io
 io.renderers.default='browser'
 
 output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/"
-output_name_stem = "All_LX_Reviews_TEST_MinClustSize"
+output_name_stem = "All_LX_Reviews"
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" + 
             "Review_Data.pickle")
 embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
@@ -64,10 +64,13 @@ def std_model(docs, embeddings):
     # topic_model = BERTopic(vectorizer_model=vectorizer_model,
     #                        embedding_model= "all-MiniLM-L6-v2").fit(docs,
     #                                                             embeddings)
-    topic_model = BERTopic(nr_topics=50, vectorizer_model=vectorizer_model,
+    # topic_model = BERTopic(nr_topics=50, vectorizer_model=vectorizer_model,
+    #                        embedding_model= "all-MiniLM-L6-v2").fit(docs,
+    #                                                                 embeddings)
+    topic_model = BERTopic(calculate_probabilities= True, nr_topics=50, vectorizer_model=vectorizer_model,
                            embedding_model= "all-MiniLM-L6-v2").fit(docs,
                                                                     embeddings)
-                                  
+                              
     print("Run time: %1.1f seconds" % (time.time() - tic))
     save_name = output_name_stem + "_standard"
     return topic_model, save_name
@@ -103,7 +106,7 @@ def non_std_model(docs, embeddings, model_name):
     
     #--- Run model
     tic = time.time()
-    topic_model = BERTopic(representation_model= representation_model, 
+    topic_model = BERTopic(calculate_probabilities= True, representation_model= representation_model, 
                            embedding_model= "all-MiniLM-L6-v2").fit(docs,
                                                                     embeddings)
     print("Run time: %1.1f seconds" % (time.time() - tic))
@@ -129,6 +132,17 @@ pickle_path = os.path.join(output_path, "%s_%s_Train_%s_Info.pickle" %
 with open(pickle_path,"wb") as f:
     pickle.dump(df_ti, f)
     pickle.dump(df_di, f)  
+    
+# Save Topic-wise probabilities
+all_prob_mat = topic_model.probabilities_
+apm_path = os.path.join(output_path, "%s_%s_Train_%s_ProbMat" % 
+                           (save_name, embed_name, tr_split))
+np.save(apm_path, all_prob_mat)
+
+
+
+    
+
 
 # Load
 # pickle_path = os.path.join(output_path,
