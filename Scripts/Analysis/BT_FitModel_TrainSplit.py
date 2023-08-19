@@ -35,6 +35,8 @@ model_name = "standard" # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 
 tr_split = 50 # 75, 50
 
+trans_test = 0
+
 #--- MAIN
 
 # Make out_path
@@ -43,9 +45,9 @@ if os.path.isdir(output_path) == False:
     
 # Get strat split training indices
 if tr_split == 75:
-    tr_i, _ = strat_split_by_rating_75(doc_path)
+    tr_i, te_i = strat_split_by_rating_75(doc_path)
 elif tr_split == 50:
-    tr_i, _ = strat_split_by_rating_50(doc_path)
+    tr_i, te_i = strat_split_by_rating_50(doc_path)
 
 # Load docs, embeddings
 docs = load_pickled_df(doc_path)
@@ -116,8 +118,8 @@ def non_std_model(docs, embeddings, model_name):
 if model_name == "standard":
     topic_model, save_name = std_model(docs, embeddings)
 else:
-    topic_model, save_name = non_std_model(docs, embeddings, model_name)
-    
+    topic_model, save_name = non_std_model(docs, embeddings, model_name)  
+   
 # Save model 
 embed_name = embed_path.split("_")[-1].split(".npy")[0]
 topic_model.save(os.path.join(output_path,
@@ -139,6 +141,30 @@ apm_path = os.path.join(output_path, "%s_%s_Train_%s_ProbMat" %
                            (save_name, embed_name, tr_split))
 np.save(apm_path, all_prob_mat)
 
+#--- Transform test data
+if trans_test == 1:
+    
+    # Load docs, embeddings
+    docs = load_pickled_df(doc_path)
+    docs = list(docs.RevText)
+    embeddings = np.load(embed_path)
+    
+    # Slice test indices
+    docs = np.array(docs)[te_i].tolist()
+    embeddings = embeddings[te_i]
+    
+    te_tm = topic_model.transform(docs, embeddings)
+    
+    # Save Topic-wise probabilities for test set
+    all_prob_mat = te_tm[1]
+    apm_path = os.path.join(output_path, "%s_%s_Test_%s_ProbMat" % 
+                               (save_name, embed_name, 100 - tr_split))
+    np.save(apm_path, all_prob_mat)
+    
+    best_prob = te_tm[0]
+    bp_path = os.path.join(output_path, "%s_%s_Test_%s_BestProbVec" % 
+                               (save_name, embed_name, 100 - tr_split))
+    np.save(bp_path, best_prob)
 
 
     
