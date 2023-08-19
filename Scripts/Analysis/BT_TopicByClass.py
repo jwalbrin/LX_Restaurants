@@ -25,6 +25,9 @@ doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
 tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_50")
 
+# tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
+#               "All_LX_Reviews_chatgpt_all-MiniLM-L6-v2_Train_50")
+
 #--- MAIN
 
 #--- Load
@@ -48,18 +51,69 @@ del tr_i
 # Load topic model
 topic_model = BERTopic.load(os.path.join(tm_path))
 
-#--- Topics per class
-# Run
-topics_pc = topic_model.topics_per_class(docs, classes=classes)
+# Manually create topics pc; MORE SEUCRE WAY OF JOINING CLASSES!!!
+df_di = topic_model.get_document_info(docs)
+df_di["Class"] = classes
 
-# Scale topics by counts
-topics_pc["Frequency"] = topics_pc.apply(lambda x: x.Frequency / 
+# Get Topic, Frequency, Class
+new_tpc = df_di[["Topic", "Document", "Class"]].copy()
+new_tpc = new_tpc.groupby(["Class", "Topic"], as_index=False).count()
+new_tpc.rename(columns = {"Document": "Frequency"}, inplace = True)
+# new_tpc = new_tpc.sort_values(["Class","Topic"], ascending = True)
+# new_tpc = new_tpc.join(df_di[["Topic","Name"]], on = "Topic", lsuffix= "", rsuffix = "_right")
+
+# Unique names, sorted
+u_topic_names = df_di[["Topic", "Name"]].sort_values("Topic")
+u_topic_names = u_topic_names.drop_duplicates()
+
+# Merge the two
+new_tpc = new_tpc.merge(u_topic_names, how = "outer")
+
+new_tpc["Frequency"] = new_tpc.apply(lambda x: x.Frequency / 
                                class_counts[int(x.Class[0].split(" ")[0])], 
                                axis = 1)
-topics_pc = topics_pc.sort_values("Class", ascending = False)
+new_tpc = new_tpc.sort_values("Class",ascending = False).reset_index(drop = True)
 
-#--- Visualize (built-in)
-topic_model.visualize_topics_per_class(topics_pc, top_n_topics=30)
+topics_pc = new_tpc
+
+# new_tpc = new_tpc.join(df_di[["Topic","Name"]], on = "Topic",
+#                        lsuffix= "_left", rsuffix = "_right")
+
+# a = df_di[["Topic","Name","Document"]]
+# a.set_index("Topic", inplace = True)
+# b = new_tpc[["Topic", "Frequency","Class"]]
+# b.set_index("Topic", inplace = True)
+
+# c = b.join(a, how = "outer")
+
+# d = pd.merge(a, b, left_index = True, right_index = True, 
+#              how = 'outer')
+
+# c = b.merge(a, on = "Topic", validate = "m:1")
+
+# a = new_tpc.join(df_di[["Topic","Name"]], on = "Topic",
+#                         lsuffix= "_left", rsuffix = "_right")
+# merged_df = pd.merge(new_tpc, df_di, left_on='Topic', right_on='Topic')
+
+# # new_tpc = a.groupby(["Class", "Topic"]).count()
+# # new_tpc = new_tpc.sort_values(["Class","Topic"], ascending = True)
+
+# b = topics_pc.sort_values(["Class","Topic"], ascending = True)
+
+# c = np.concatenate((new_tpc,b),axis = 1)
+
+#--- Topics per class
+# # Run
+# topics_pc = topic_model.topics_per_class(docs, classes=classes)
+
+# # Scale topics by counts
+# topics_pc["Frequency"] = topics_pc.apply(lambda x: x.Frequency / 
+#                                 class_counts[int(x.Class[0].split(" ")[0])], 
+#                                 axis = 1)
+# topics_pc = topics_pc.sort_values("Class", ascending = False)
+
+# #--- Visualize (built-in)
+# topic_model.visualize_topics_per_class(topics_pc, top_n_topics=30)
 
 #--- Bar plot per rating (x = topics)
 # Aesthetics
@@ -80,7 +134,7 @@ for r in u_ratings:
                           (topics_pc.Topic != -1)]
     plot_data = plot_data.nlargest(top_n_to_show, "Frequency")
     
-    x_labels = [("%i %s" % (plot_data.Topic.iloc[i], plot_data.Words.iloc[i]))
+    x_labels = [("%i %s" % (plot_data.Topic.iloc[i], plot_data.Name.iloc[i]))
                 for i in np.arange(len(plot_data))]
     
     cmap_intervals = np.linspace(0,1,len(x_labels))
