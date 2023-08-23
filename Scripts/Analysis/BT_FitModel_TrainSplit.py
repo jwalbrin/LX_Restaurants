@@ -31,7 +31,7 @@ embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
 
 model_name = "standard" # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 # model_name =  "chatgpt"
-# model_name =  "keybert"
+model_name =  "keybert"
 
 tr_split = 50 # 75, 50
 

@@ -18,6 +18,9 @@ tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_50")
 
 # tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
+#               "All_LX_Reviews_keybert_all-MiniLM-L6-v2_Train_50")
+
+# tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
 #               "All_LX_Reviews_chatgpt_all-MiniLM-L6-v2_Train_50")
 
 
@@ -59,10 +62,10 @@ def create_topics_per_class_df(topic_model, docs):
         if len(df_tpc[df_tpc.Class == u]) < len(u_topic_names):
             miss_topics = np.setdiff1d(u_topic_names.Topic, 
                                        df_tpc.Topic[df_tpc.Class == u])
-        for mt in miss_topics:        
-            new_row = [u, mt, 0,
-                       u_topic_names.Name[u_topic_names.Topic == mt].iloc[0]]
-            df_tpc.loc[len(df_tpc)] = new_row
+            for mt in miss_topics:        
+                new_row = [u, mt, 0,
+                           u_topic_names.Name[u_topic_names.Topic == mt].iloc[0]]
+                df_tpc.loc[len(df_tpc)] = new_row
             
     # Convert frequency to % (of all reviews per rating category)
     df_tpc["Frequency"] = df_tpc.apply(lambda x: ((x.Frequency / 

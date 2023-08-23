@@ -22,14 +22,19 @@ output_name_stem = "All_LX_Reviews_ByClass"
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" + 
             "Review_Data.pickle")
 tpc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/" +
-            "All_LX_Reviews_ByClass_standard_all-MiniLM-L6-v2_Train_50.pickle")
+            "All_LX_Reviews_ByClass_standard_all-MiniLM-L6-v2_Train_50_"+
+            "Reduc_100_Clusters.pickle")
 
+# tpc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/" +
+#             "All_LX_Reviews_ByClass_standard_all-MiniLM-L6-v2_Train_50.pickle")
+# tpc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/" +
+#             "All_LX_Reviews_ByClass_keybert_all-MiniLM-L6-v2_Train_50.pickle")
 # tpc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/" +
 #             "All_LX_Reviews_ByClass_chatgpt_all-MiniLM-L6-v2_Train_50.pickle")
 
 # Figure aesthetics
 cmap = get_cmap("viridis")
-x_lims = [0,3]
+x_lims = [0,10]
 cm = 1/2.54
 
 #--- MAIN
