@@ -9,6 +9,7 @@ import sys
 scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
 sys.path.append(scripts_path)
 from Functions.dataformatting import *
+from Functions.analysis import *
 
 import openai
 from bertopic import BERTopic
@@ -33,149 +34,161 @@ model_name = "standard" # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 # model_name =  "chatgpt"
 model_name =  "keybert"
 
-tr_split = 50 # 75, 50
+model_names = ["standard", "keybert"]
 
-trans_test = 0
+tr_splits = [50, 75] # 75, 50
+
+trans_test = 1
+
+rc_vals = [0, 50] # zero skips, else take k clusters
 
 #--- MAIN
+
+#--- Functions
 
 # Make out_path
 if os.path.isdir(output_path) == False:
     os.mkdir(output_path)
+for m in model_names:
+    for ts in tr_splits:
     
-# Get strat split training indices
-if tr_split == 75:
-    tr_i, te_i = strat_split_by_rating_75(doc_path)
-elif tr_split == 50:
-    tr_i, te_i = strat_split_by_rating_50(doc_path)
-
-# Load docs, embeddings
-docs = load_pickled_df(doc_path)
-docs = list(docs.RevText)
-embeddings = np.load(embed_path)
-
-# Slice training indices
-docs = np.array(docs)[tr_i].tolist()
-embeddings = embeddings[tr_i]
-
-#--- Create model
-def std_model(docs, embeddings):
-    # Standard model with frequent words removed
-    tic = time.time()
-    vectorizer_model = CountVectorizer(stop_words="english")
-    # topic_model = BERTopic(vectorizer_model=vectorizer_model,
-    #                        embedding_model= "all-MiniLM-L6-v2").fit(docs,
-    #                                                             embeddings)
-    # topic_model = BERTopic(nr_topics=50, vectorizer_model=vectorizer_model,
-    #                        embedding_model= "all-MiniLM-L6-v2").fit(docs,
-    #                                                                 embeddings)
-    topic_model = BERTopic(calculate_probabilities= True, vectorizer_model=vectorizer_model,
-                           embedding_model= "all-MiniLM-L6-v2").fit(docs,
-                                                                    embeddings)
-                              
-    print("Run time: %1.1f seconds" % (time.time() - tic))
-    save_name = output_name_stem + "_standard"
-    return topic_model, save_name
-
-def non_std_model(docs, embeddings, model_name):
-    #Select one of 4 hard-coded models
-    if model_name == "chatgpt":
-        prompt = """
-        I have a topic that contains the following documents: 
-        [DOCUMENTS]
-        The topic is described by the following keywords: [KEYWORDS]
+        # Train / test splits
+        tr_i, te_i = strat_split_by_rating(doc_path, ts)
         
-        Based on the information above, extract a short topic label in the following format:
-        topic: <topic label>
-        """
-        openai.api_key = "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"
-        representation_model = OpenAI(model="gpt-3.5-turbo",
-                                      prompt = prompt,
-                                      delay_in_seconds=40, chat=True)
-    elif model_name == "flan-t5":
-        prompt = ("I have a topic described by the following " + 
-                  "keywords: [KEYWORDS]. Based on the previous keywords, " + 
-                  "what is this topic about?")
-        generator = pipeline('text2text-generation', 
-                             model='google/flan-t5-base')
-        representation_model = TextGeneration(generator, prompt=prompt)
-
-    elif model_name == "gpt2":
-        representation_model = TextGeneration('gpt2')
+        # Load docs, embeddings
+        docs = load_pickled_df(doc_path)
+        docs = list(docs.RevText)
+        embeddings = np.load(embed_path)
         
-    elif model_name == "keybert":
-        representation_model = KeyBERTInspired()
-    
-    #--- Run model
-    tic = time.time()
-    topic_model = BERTopic(calculate_probabilities= True, representation_model= representation_model, 
-                           embedding_model= "all-MiniLM-L6-v2").fit(docs,
-                                                                    embeddings)
-    print("Run time: %1.1f seconds" % (time.time() - tic))
-    save_name = output_name_stem + "_" + model_name
-    return topic_model, save_name
+        # # Slice training/testing indices
+        # docs_tr = np.array(docs)[tr_i].tolist()
+        # embeddings_tr = embeddings[tr_i]
+        # docs_te = np.array(docs)[te_i].tolist()
+        # embeddings_te = embeddings[te_i]
+                
+        #--- Run model (with training data)
+        if model_name == "standard":
+            topic_model, save_name = std_model(np.array(docs)[tr_i].tolist(),
+                                               embeddings[tr_i],
+                                               output_name_stem)
+        else:
+            topic_model, save_name = non_std_model(np.array(docs)[tr_i].tolist(),
+                                                   embeddings[tr_i], 
+                                                   model_name,
+                                                   output_name_stem)  
+           
+        # Save model 
+        embed_name = embed_path.split("_")[-1].split(".npy")[0]
+        topic_model.save(os.path.join(output_path,
+                                      "%s_%s_Train_%i" % 
+                                      (save_name,embed_name, tr_split)))
+        
+        # Save info
+        df_ti = topic_model.get_topic_info()
+        df_di = topic_model.get_document_info(docs)
+        pickle_path = os.path.join(output_path, "%s_%s_Train_%s_Info.pickle" % 
+                                   (save_name, embed_name, tr_split))
+        with open(pickle_path,"wb") as f:
+            pickle.dump(df_ti, f)
+            pickle.dump(df_di, f)  
+            
+        # Save Topic-wise probabilities
+        all_prob_mat = topic_model.probabilities_
+        apm_path = os.path.join(output_path, "%s_%s_Train_%s_ProbMat" % 
+                                   (save_name, embed_name, tr_split))
+        np.save(apm_path, all_prob_mat)
+        
+        #--- Transform test data
+        if trans_test == 1:
+            
+            # Transform test data            
+            te_tm = topic_model.transform(np.array(docs)[te_i].tolist(),
+                                          embeddings[te_i])
+            
+            # Save Topic-wise probabilities for test set
+            all_prob_mat = te_tm[1]
+            apm_path = os.path.join(output_path, "%s_%s_Test_%s_ProbMat" % 
+                                       (save_name, embed_name, 100 - tr_split))
+            np.save(apm_path, all_prob_mat)
+            
+            best_prob = te_tm[0]
+            bp_path = os.path.join(output_path, "%s_%s_Test_%s_BestProbVec" % 
+                                       (save_name, embed_name, 100 - tr_split))
+            np.save(bp_path, best_prob)
+        
+        #--- Reduce clusters
+        for rc in rc_vals:
+            
+            if rc != 0:
+                # Get reduced model (for training topics)
+                reduc_mod = topic_model.reduce_topics(
+                                        np.array(docs)[tr_i].tolist(), 
+                                            nr_topics=rm)
+                
+                # Save model 
+                reduc_mod.save(os.path.join(output_path,
+                                        "%s_%s_Train_%i_Reduc_%i_Clusters" % 
+                                        (save_name,embed_name, 
+                                         tr_split,rm)))               
+                                            
+                # Save info
+                df_ti = reduc_mod.get_topic_info()
+                df_di = reduc_mod.get_document_info(docs)
+                pickle_path = os.path.join(output_path, 
+                               "%s_%s_Train_%i_Reduc_%i_Clusters_Info.pickle" % 
+                               (save_name,embed_name, 
+                                tr_split,rm))
+                with open(pickle_path,"wb") as f:
+                    pickle.dump(df_ti, f)
+                    pickle.dump(df_di, f)  
+                    
+                # Save Topic-wise probabilities
+                all_prob_mat = reduc_mod.probabilities_
+                apm_path = os.path.join(output_path, 
+                                "%s_%s_Train_%i_Reduc_%i_Clusters_ProbMat" % 
+                                (save_name,embed_name, 
+                                 tr_split,rm))
+                np.save(apm_path, all_prob_mat)              
+                                           
+                #--- Transform test data
+                if trans_test == 1:
+                    
+                    # Transform test data            
+                    te_tm = reduc_model.transform(np.array(docs)[te_i].tolist(),
+                                                  embeddings[te_i])
+                    
+                    # Save Topic-wise probabilities for test set
+                    all_prob_mat = te_tm[1]
+                    apm_path = os.path.join(output_path, 
+                                    "%s_%s_Test_%s_Reduc_%i_Clusters_ProbMat" % 
+                                    (save_name, embed_name, 
+                                     100 - tr_split, rm))
+                    np.save(apm_path, all_prob_mat)
+                    
+                    best_prob = te_tm[0]
+                    bp_path = os.path.join(output_path, 
+                                    "%s_%s_Test_%s_Reduc_%i_Clusters_BestProbVec" % 
+                                    (save_name, embed_name, 
+                                     100 - tr_split, rm))
+                    np.save(bp_path, best_prob)
+            
+                    
+                    # # Transform test data            
+                    # te_tm = topic_model.transform(np.array(docs)[te_i].tolist(),
+                    #                               embeddings[te_i])
+                    
+                    # # Save Topic-wise probabilities for test set
+                    # all_prob_mat = te_tm[1]
+                    # apm_path = os.path.join(output_path, "%s_%s_Test_%s_ProbMat" % 
+                    #                            (save_name, embed_name, 100 - tr_split))
+                    # np.save(apm_path, all_prob_mat)
+                    
+                    # best_prob = te_tm[0]
+                    # bp_path = os.path.join(output_path, "%s_%s_Test_%s_BestProbVec" % 
+                    #                            (save_name, embed_name, 100 - tr_split))
+                    # np.save(bp_path, best_prob)
+            
 
-if model_name == "standard":
-    topic_model, save_name = std_model(docs, embeddings)
-else:
-    topic_model, save_name = non_std_model(docs, embeddings, model_name)  
-   
-# Save model 
-embed_name = embed_path.split("_")[-1].split(".npy")[0]
-topic_model.save(os.path.join(output_path,
-                              "%s_%s_Train_%i" % 
-                              (save_name,embed_name, tr_split)))
-
-# Save info
-df_ti = topic_model.get_topic_info()
-df_di = topic_model.get_document_info(docs)
-pickle_path = os.path.join(output_path, "%s_%s_Train_%s_Info.pickle" % 
-                           (save_name, embed_name, tr_split))
-with open(pickle_path,"wb") as f:
-    pickle.dump(df_ti, f)
-    pickle.dump(df_di, f)  
-    
-# Save Topic-wise probabilities
-all_prob_mat = topic_model.probabilities_
-apm_path = os.path.join(output_path, "%s_%s_Train_%s_ProbMat" % 
-                           (save_name, embed_name, tr_split))
-np.save(apm_path, all_prob_mat)
-
-#--- Transform test data
-if trans_test == 1:
-    
-    # Load docs, embeddings
-    docs = load_pickled_df(doc_path)
-    docs = list(docs.RevText)
-    embeddings = np.load(embed_path)
-    
-    # Slice test indices
-    docs = np.array(docs)[te_i].tolist()
-    embeddings = embeddings[te_i]
-    
-    te_tm = topic_model.transform(docs, embeddings)
-    
-    # Save Topic-wise probabilities for test set
-    all_prob_mat = te_tm[1]
-    apm_path = os.path.join(output_path, "%s_%s_Test_%s_ProbMat" % 
-                               (save_name, embed_name, 100 - tr_split))
-    np.save(apm_path, all_prob_mat)
-    
-    best_prob = te_tm[0]
-    bp_path = os.path.join(output_path, "%s_%s_Test_%s_BestProbVec" % 
-                               (save_name, embed_name, 100 - tr_split))
-    np.save(bp_path, best_prob)
-
-
-    
-
-
-# Load
-# pickle_path = os.path.join(output_path,
-#                             "All_LX_Reviews_Info_15K.pickle")
-# with open(pickle_path,"rb") as f:
-#     reg =  pickle.load(f)
- 
 
 
 
