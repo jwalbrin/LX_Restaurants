@@ -138,10 +138,10 @@ def quantile_label_no_outliers_idx(val, percentile, qlab):
         percentile))
     return qcut
 
-def strat_split_by_rating_75(df_rev_path):
+def strat_split_by_rating(df_rev_path, tr_split):
     """
     Stratified split review data
-    Hardcoded for 75% training 25% testing split
+    tr_split = percentage of training data
     """
     # Load review data
     df_rev = load_pickled_df(df_rev_path)
@@ -149,45 +149,11 @@ def strat_split_by_rating_75(df_rev_path):
     # KStratSamples
     X = df_rev.RevTitle
     y = df_rev.RevRating
-    skf = StratifiedKFold(n_splits=4, random_state = 42, shuffle = True)
-    skf.get_n_splits(X, y)
+    skf = StratifiedKFold(n_splits= round(100 / (100 - tr_split)), 
+                          random_state = 42, shuffle = True)
     
     # Get first fold, get train and test indices
-    fold_A,_,_,_ = skf.split(X,y)
-    tr_i = fold_A[0]
-    te_i = fold_A[1]
-    
-    # # Print the proportion of tr/te samples per rating
-    # for r in np.arange(5,0,-1):
-    #     total_per_rating = len(df_rev[df_rev.RevRating == r])
-    #     tr_prop = (len(df_rev[(df_rev.RevRating == r) & 
-    #                (df_rev.RevIdx.isin(tr_i))]) / 
-    #                len(df_rev[df_rev.RevRating == r]))
-    #     te_prop = (len(df_rev[(df_rev.RevRating == r) & 
-    #                (df_rev.RevIdx.isin(te_i))]) / 
-    #                len(df_rev[df_rev.RevRating == r]))
-    #     print("%i star train prop = %1.2f of total %s samples" % 
-    #           (r,tr_prop, total_per_rating))
-    #     print("%i star test prop = %1.2f of total %s samples" % 
-    #           (r,te_prop, total_per_rating))
-    return tr_i, te_i
-
-def strat_split_by_rating_50(df_rev_path):
-    """
-    Stratified split review data
-    Hardcoded for 7%0 training 50% testing split
-    """
-    # Load review data
-    df_rev = load_pickled_df(df_rev_path)
-    
-    # KStratSamples
-    X = df_rev.RevTitle
-    y = df_rev.RevRating
-    skf = StratifiedKFold(n_splits=2, random_state = 42, shuffle = True)
-    skf.get_n_splits(X, y)
-    
-    # Get first fold, get train and test indices
-    fold_A,_ = skf.split(X,y)
+    fold_A,*_ = skf.split(X,y)
     tr_i = fold_A[0]
     te_i = fold_A[1]
     
