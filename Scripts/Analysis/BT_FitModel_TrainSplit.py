@@ -30,17 +30,14 @@ doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
 embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
-model_name = "standard" # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
-# model_name =  "chatgpt"
-model_name =  "keybert"
-
-model_names = ["standard", "keybert"]
+model_names = ["standard", "keybert"] # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 
 tr_splits = [50, 75] # 75, 50
 
 trans_test = 1
 
-rc_vals = [0, 50] # zero skips, else take k clusters
+rc_vals = [0, 50, 75, 100, 125, 150] # zero skips, else take k clusters
+rc_vals = [0, 100, 150] # zero skips, else take k clusters
 
 #--- MAIN
 
@@ -67,27 +64,27 @@ for m in model_names:
         # embeddings_te = embeddings[te_i]
                 
         #--- Run model (with training data)
-        if model_name == "standard":
+        if m == "standard":
             topic_model, save_name = std_model(np.array(docs)[tr_i].tolist(),
                                                embeddings[tr_i],
                                                output_name_stem)
         else:
             topic_model, save_name = non_std_model(np.array(docs)[tr_i].tolist(),
                                                    embeddings[tr_i], 
-                                                   model_name,
+                                                   m,
                                                    output_name_stem)  
            
         # Save model 
         embed_name = embed_path.split("_")[-1].split(".npy")[0]
         topic_model.save(os.path.join(output_path,
                                       "%s_%s_Train_%i" % 
-                                      (save_name,embed_name, tr_split)))
+                                      (save_name,embed_name, ts)))
         
         # Save info
         df_ti = topic_model.get_topic_info()
-        df_di = topic_model.get_document_info(docs)
+        df_di = topic_model.get_document_info(np.array(docs)[tr_i].tolist())
         pickle_path = os.path.join(output_path, "%s_%s_Train_%s_Info.pickle" % 
-                                   (save_name, embed_name, tr_split))
+                                   (save_name, embed_name, ts))
         with open(pickle_path,"wb") as f:
             pickle.dump(df_ti, f)
             pickle.dump(df_di, f)  
@@ -95,7 +92,7 @@ for m in model_names:
         # Save Topic-wise probabilities
         all_prob_mat = topic_model.probabilities_
         apm_path = os.path.join(output_path, "%s_%s_Train_%s_ProbMat" % 
-                                   (save_name, embed_name, tr_split))
+                                   (save_name, embed_name, ts))
         np.save(apm_path, all_prob_mat)
         
         #--- Transform test data
@@ -108,36 +105,43 @@ for m in model_names:
             # Save Topic-wise probabilities for test set
             all_prob_mat = te_tm[1]
             apm_path = os.path.join(output_path, "%s_%s_Test_%s_ProbMat" % 
-                                       (save_name, embed_name, 100 - tr_split))
+                                       (save_name, embed_name, 100 - ts))
             np.save(apm_path, all_prob_mat)
             
             best_prob = te_tm[0]
             bp_path = os.path.join(output_path, "%s_%s_Test_%s_BestProbVec" % 
-                                       (save_name, embed_name, 100 - tr_split))
+                                       (save_name, embed_name, 100 - ts))
             np.save(bp_path, best_prob)
-        
+                    
         #--- Reduce clusters
         for rc in rc_vals:
             
             if rc != 0:
+                
+                # Re-load topic model (non-reduced version)
+                # Load topic model
+                topic_model = BERTopic.load(os.path.join(output_path,
+                                              "%s_%s_Train_%i" % 
+                                              (save_name,embed_name, ts)))
+                
                 # Get reduced model (for training topics)
                 reduc_mod = topic_model.reduce_topics(
                                         np.array(docs)[tr_i].tolist(), 
-                                            nr_topics=rm)
+                                            nr_topics=rc)
                 
                 # Save model 
                 reduc_mod.save(os.path.join(output_path,
                                         "%s_%s_Train_%i_Reduc_%i_Clusters" % 
                                         (save_name,embed_name, 
-                                         tr_split,rm)))               
+                                         ts,rc)))               
                                             
                 # Save info
                 df_ti = reduc_mod.get_topic_info()
-                df_di = reduc_mod.get_document_info(docs)
+                df_di = reduc_mod.get_document_info(np.array(docs)[tr_i].tolist())
                 pickle_path = os.path.join(output_path, 
                                "%s_%s_Train_%i_Reduc_%i_Clusters_Info.pickle" % 
                                (save_name,embed_name, 
-                                tr_split,rm))
+                                ts,rc))
                 with open(pickle_path,"wb") as f:
                     pickle.dump(df_ti, f)
                     pickle.dump(df_di, f)  
@@ -147,14 +151,14 @@ for m in model_names:
                 apm_path = os.path.join(output_path, 
                                 "%s_%s_Train_%i_Reduc_%i_Clusters_ProbMat" % 
                                 (save_name,embed_name, 
-                                 tr_split,rm))
+                                 ts,rc))
                 np.save(apm_path, all_prob_mat)              
                                            
                 #--- Transform test data
                 if trans_test == 1:
                     
                     # Transform test data            
-                    te_tm = reduc_model.transform(np.array(docs)[te_i].tolist(),
+                    te_tm = reduc_mod.transform(np.array(docs)[te_i].tolist(),
                                                   embeddings[te_i])
                     
                     # Save Topic-wise probabilities for test set
@@ -162,16 +166,15 @@ for m in model_names:
                     apm_path = os.path.join(output_path, 
                                     "%s_%s_Test_%s_Reduc_%i_Clusters_ProbMat" % 
                                     (save_name, embed_name, 
-                                     100 - tr_split, rm))
+                                     100 - ts, rc))
                     np.save(apm_path, all_prob_mat)
                     
                     best_prob = te_tm[0]
                     bp_path = os.path.join(output_path, 
                                     "%s_%s_Test_%s_Reduc_%i_Clusters_BestProbVec" % 
                                     (save_name, embed_name, 
-                                     100 - tr_split, rm))
-                    np.save(bp_path, best_prob)
-            
+                                     100 - ts, rc))
+                    np.save(bp_path, best_prob)                               
                     
                     # # Transform test data            
                     # te_tm = topic_model.transform(np.array(docs)[te_i].tolist(),
