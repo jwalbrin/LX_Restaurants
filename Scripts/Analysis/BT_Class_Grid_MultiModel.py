@@ -36,7 +36,6 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/RegressionModelling/")
 #               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
 # Test parameters
-
 rep_models = ["All_LX_Reviews_standard_all-MiniLM-L6-v2",
           "All_LX_Reviews_keybert_all-MiniLM-L6-v2"]
 
@@ -46,8 +45,17 @@ tr_splits = [50, 75]
 
 rc_vals = [0, 100, 150] # zero skips, else take k clusters
 
-# Pipe and parameters to search over
+feats_to_keep = np.arange(50) # "All" or np.array of indices
 
+mod_eval_metric = "balanced_accuracy"
+
+cv_folds = 10
+
+# Flags
+remove_outliers = 1
+softmax_feats = 0
+
+# Pipe and parameters to search over
 pipe_params = [(Pipeline([
         ('scaler', StandardScaler()),
         ('clf', LogisticRegression())
@@ -68,15 +76,6 @@ pipe_params = [(Pipeline([
 
 
  
-mod_eval_metric = "balanced_accuracy"
-cv_folds = 10
-
-remove_outliers = 1
-
-softmax_feats = 0
-
-feats_to_keep = np.arange(50) # "All" or np.array of indices
-
 #--- MAIN
 
 #--- Functions 
