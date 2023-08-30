@@ -237,8 +237,8 @@ texts = np.hstack(np.asarray(texts))
 ratings = np.hstack(np.asarray(ratings)) / 10
 ratings = ratings.astype("int")
 
-# Create HiLowRatings (2 if > 3, 1 if < 3, 0 else)
-hilowratings = np.array([2 if i > 3 else 1 if i < 3 else 0
+# Create HiLoRatings (2 if > 3, 1 if < 3, 0 else)
+hilo_ratings = np.array([2 if i > 3 else 1 if i < 3 else 0
                          for i in list(ratings)])
 
 # Format dates
@@ -252,7 +252,7 @@ df_out = pd.DataFrame({"MainFK" : main_FK,
                        "RevTitle": titles,
                        "RevDate": dates,
                        "RevRating": ratings,
-                       "RevHiLow": hilowratings,
+                       "RevHiLoRating": hilo_ratings,
                        "RevText": texts}).reset_index(names = "RevIdx")
 
 # Remove empty values (wiht no rating)
