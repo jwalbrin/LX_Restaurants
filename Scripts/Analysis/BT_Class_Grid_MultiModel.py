@@ -46,6 +46,7 @@ tr_splits = [50, 75]
 rc_vals = [0, 100, 150] # zero skips, else take k clusters
 
 feats_to_keep = np.arange(50) # "All" or np.array of indices
+feats_to_keep = "All"
 
 mod_eval_metric = "balanced_accuracy"
 
@@ -56,23 +57,23 @@ remove_outliers = 1
 softmax_feats = 0
 
 # Pipe and parameters to search over
-pipe_params = [(Pipeline([
-        ('scaler', StandardScaler()),
-        ('clf', LogisticRegression())
-        ]),
-        {"scaler": [StandardScaler(), Normalizer()],
-          # "clf__class_weight": ["balanced", None]
-          "clf__class_weight": [None]},
-        )]
-
 # pipe_params = [(Pipeline([
 #         ('scaler', StandardScaler()),
-#         ('clf', GridSearchCV(RFE(LogisticRegression(), step=10), 
-#                            params, cv=3, scoring='balanced_accuracy'))
+#         ('clf', LogisticRegression())
 #         ]),
-#         {'estimator__class_weight': ['balanced', None]},
-#         "B"
+#         {"scaler": [StandardScaler(), Normalizer()],
+#           # "clf__class_weight": ["balanced", None]
+#           "clf__class_weight": [None]},
 #         )]
+
+pipe_params = [(Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', GradientBoostingClassifier(random_state = 42))
+        ]),
+        {'clf__n_estimators': [100]},
+        )]
+
+
 
 
  

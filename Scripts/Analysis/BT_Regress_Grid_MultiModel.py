@@ -12,7 +12,8 @@ from sklearn.metrics import balanced_accuracy_score, multilabel_confusion_matrix
 from sklearn.linear_model import Lasso, Ridge
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import GridSearchCV      # For optimization
-
+from sklearn.feature_selection import RFE
+from scipy.special import softmax
 
 import sys
 scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
@@ -36,11 +37,30 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/RegressionModelling/")
 rep_models = ["All_LX_Reviews_standard_all-MiniLM-L6-v2",
           "All_LX_Reviews_keybert_all-MiniLM-L6-v2"]
 
+rep_models = ["All_LX_Reviews_keybert_all-MiniLM-L6-v2"]
+
 tr_splits = [50, 75]
 
 rc_vals = [0, 100, 150] # zero skips, else take k clusters
 
 # Pipe and parameters to search over
+# pipe_params = [(Pipeline([
+#               ("scaler", StandardScaler()),
+#               ("regress", (Ridge(random_state = 42)))
+#               ]),
+#               {"scaler": [StandardScaler(), Normalizer()],
+#                 "regress__alpha": [0.01, 0.1, 1, 10, 100, 1000, 
+#                                   10000, 100000, 1000000]
+#               }),
+#               (Pipeline([
+#               ("scaler", StandardScaler()),
+#               ("regress", (Lasso(random_state = 42)))
+#               ]),
+#               {"scaler": [StandardScaler(), Normalizer()],
+#                 "regress__alpha": [0.01, 0.1, 1, 10, 100, 1000, 
+#                                       10000, 100000, 1000000]
+#               })]
+
 pipe_params = [(Pipeline([
               ("scaler", StandardScaler()),
               ("regress", (Ridge(random_state = 42)))
@@ -48,20 +68,27 @@ pipe_params = [(Pipeline([
               {"scaler": [StandardScaler(), Normalizer()],
                 "regress__alpha": [0.01, 0.1, 1, 10, 100, 1000, 
                                   10000, 100000, 1000000]
-              }),
-              (Pipeline([
-              ("scaler", StandardScaler()),
-              ("regress", (Lasso(random_state = 42)))
-              ]),
-              {"scaler": [StandardScaler(), Normalizer()],
-                "regress__alpha": [0.01, 0.1, 1, 10, 100, 1000, 
-                                      10000, 100000, 1000000]
               })]
+
+# pipe_params = [(Pipeline([
+#               ("scaler", StandardScaler()),
+#               ("feats", RFE(Ridge(random_state = 42))),
+#               ("regress", (Ridge(random_state = 42)))
+#               ]),
+#               {"scaler": [StandardScaler(), Normalizer()],
+#                "feats__n_features_to_select": [10,20,30],
+#                "regress__solver": ["auto", "svd", "sag", "saga"],
+#                 "regress__alpha": [0.01, 0.1, 1, 10, 100, 1000, 
+#                                   10000, 100000, 1000000]
+#               })]
+
+
 
 mod_eval_metric = "r2"
 cv_folds = 10
 
 remove_outliers = 1
+softmax_feats = 1
 
 #--- MAIN
 
@@ -176,7 +203,11 @@ for m_i, m in enumerate(rep_models):
                 X_train = X_train[no_idx_tr,:]
                 X_test = X_test[no_idx_te,:]
                 y_train = y_train[no_idx_tr]
-                y_test = y_test[no_idx_te]           
+                y_test = y_test[no_idx_te]          
+                
+            if softmax_feats == 1:
+                X_train = softmax(X_train, axis = 1)
+                X_test = softmax(X_test, axis = 1)
                 
             #--- Pipe-grid-fit              
             for pp_i, (pipe, params) in enumerate(pipe_params):
