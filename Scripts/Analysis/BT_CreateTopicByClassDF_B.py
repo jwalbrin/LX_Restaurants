@@ -46,7 +46,7 @@ def create_topics_per_class_df(topic_model, docs, classes, class_counts):
     # Get Topic, Frequency, Class
     df_tpc = df_di[["Topic", "Document", "Class"]].copy()
     df_tpc = df_tpc.groupby(["Class", "Topic"], as_index=False).count()
-    df_tpc.rename(columns = {"Document": "Frequency"}, inplace = True)
+    df_tpc.rename(columns = {"Document": "FreqTotal"}, inplace = True)
     
     # Unique topic names, sorted
     u_topic_names = df_di[["Topic", "Name"]].sort_values("Topic")
@@ -70,8 +70,8 @@ def create_topics_per_class_df(topic_model, docs, classes, class_counts):
                 df_tpc.loc[len(df_tpc)] = new_row
             
     # Convert frequency to % (of all reviews per rating category)   
-    
-    df_tpc["Frequency"] = df_tpc.apply(lambda x: ((x.Frequency / 
+    df_tpc["FreqRaw"] = df_tpc["FreqTotal"]
+    df_tpc["FreqTotal"] = df_tpc.apply(lambda x: ((x.FreqTotal / 
                                     class_counts[x.Class])
                                     *100), 
                                     axis = 1)
@@ -79,28 +79,28 @@ def create_topics_per_class_df(topic_model, docs, classes, class_counts):
                                   ascending = [False, 
                                                True]).reset_index(drop = True)
     # Reorder
-    df_tpc = df_tpc[["Name", "Topic", "Frequency", "Class"]]
+    df_tpc = df_tpc[["Name", "Topic", "FreqTotal", "FreqRaw","Class"]]
     return df_tpc
 
 def make_diff_cols(df_tpc):
     """Simple subtraction difference columns, e.g. high frequency minus 
     low frequency"""
 
-    df_tpc["High_Over_Low"] = np.zeros(len(df_tpc))
-    df_tpc["High_Over_Med"] = np.zeros(len(df_tpc))
-    df_tpc["Low_Over_Med"] = np.zeros(len(df_tpc))
+    df_tpc["HighOverLow"] = np.zeros(len(df_tpc))
+    df_tpc["HighOverMed"] = np.zeros(len(df_tpc))
+    df_tpc["LowOverMed"] = np.zeros(len(df_tpc))
     n_classes = len(df_tpc[df_tpc.Topic == 0])
     
     for t_i in np.arange(len(df_tpc)):
         
         ratings = np.array(df_tpc[df_tpc.Topic == df_tpc.iloc[t_i].Topic].
                            sort_values("Class", ascending = False).
-                           Frequency)   
+                           FreqTotal)   
             
         # # High over low
-        df_tpc["High_Over_Low"].iloc[t_i] = ratings[0] - ratings[1]    
-        df_tpc["High_Over_Med"].iloc[t_i] = ratings[0] - ratings[2]    
-        df_tpc["Low_Over_Med"].iloc[t_i] = ratings[1] - ratings[2]    
+        df_tpc["HighOverLow"].iloc[t_i] = ratings[0] - ratings[1]    
+        df_tpc["HighOverMed"].iloc[t_i] = ratings[0] - ratings[2]    
+        df_tpc["LowOverMed"].iloc[t_i] = ratings[1] - ratings[2]    
     return df_tpc
 
 #--- Load
@@ -138,7 +138,7 @@ df_out = make_diff_cols(df_tpc)
 save_name = tm_path.split("All_LX_Reviews_")[-1]
 pickle_path = os.path.join(output_path, "%s_%s.pickle" % 
                            (output_name_stem,
-                           save_name))
+                           save_name % (tr_split)))
 with open(pickle_path,"wb") as f:
     pickle.dump(df_out, f)
 
