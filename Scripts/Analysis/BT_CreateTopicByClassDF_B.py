@@ -18,11 +18,9 @@ doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
 tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s")
 
-# tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
-#               "All_LX_Reviews_keybert_all-MiniLM-L6-v2_Train_50")
-
-# tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
-#               "All_LX_Reviews_chatgpt_all-MiniLM-L6-v2_Train_50")
+tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
+              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s" +
+              "_Reduc_60_Clusters")
 
 tr_split = 75
 

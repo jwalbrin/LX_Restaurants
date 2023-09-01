@@ -1,7 +1,18 @@
 """Uses grid search to find best classification model, 
 for different input topic rep_models
 Version C is binary HiLow classification
-E = embeddings"""
+E = embeddings
+Perm = permutations where a specified percentage of samples from each
+class are removed (e.g. perc_best_topics = 10 = 10%): for the first "test"
+permutation, these indices are the hypothesized "best samples" that belong to 
+the topics that best separate high and low ratings; the remaining permuatations 
+are indices of the same % (e.g. 10% samples per class) that are not included 
+in these "best samples"
+Note that in most cases, a small set of samples are excluded from all analyses.
+For example if perc_best_topics = 10%, and the first 4 topics account for 10.3%
+of samples, then 0.3% remaining samples from the 4th topic will be excluded 
+from all permutations.
+"""
 
 import os
 import time
@@ -42,18 +53,18 @@ df_tpc_path = (main_path +
 df_di_path = (main_path + 
                "%s_Train_%i_Info.pickle")
 
-output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/RegressionModelling/")
+output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Classification/Perm/")
 
 # embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
 #               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
 # Test parameters
-# rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2_UMAP_50"
-rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
+rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2_UMAP_5"
+# rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
 
 topic_model_name = "All_LX_Reviews_standard_all-MiniLM-L6-v2"
 
-tr_split = 75
+tr_split = 50
 
 feats_to_keep = np.arange(50) # "All" or np.array of indices
 feats_to_keep = "All"
@@ -62,19 +73,27 @@ mod_eval_metric = "balanced_accuracy"
 
 cv_folds = 10
 
-n_perm = 3
+n_perm = 500
 
 perc_best_topic = 10 # percentage of best topics to remove
 
+# pipe
+
+pipe = Pipeline([
+              ('scaler', StandardScaler()),
+              ('clf', LogisticRegression(max_iter = 300, 
+                                         random_state = 42))
+              ])
+
 # Pipe and parameters to search over
-pipe_params = [(Pipeline([
-        ('scaler', StandardScaler()),
-        ('clf', LogisticRegression(max_iter = 300, random_state = 42))
-        ]),
-        {"scaler": [StandardScaler(), Normalizer()],
-          # "clf__class_weight": ["balanced", None]
-          "clf__class_weight": [None]},
-        )]
+# pipe_params = [(Pipeline([
+#         ('scaler', StandardScaler()),
+#         ('clf', LogisticRegression(max_iter = 300, random_state = 42))
+#         ]),
+#         {"scaler": [StandardScaler(), Normalizer()],
+#           # "clf__class_weight": ["balanced", None]
+#           "clf__class_weight": [None]},
+#         )]
 
 # pipe_params = [(Pipeline([
 #         ('scaler', StandardScaler()),
@@ -91,8 +110,7 @@ pipe_params = [(Pipeline([
 
 #--- Functions 
     
-def non_outlier_idx(all_tr_path, X_train,
-                all_te_path, X_test):
+def non_outlier_idx(all_tr_path, X_train, all_te_path, X_test):
     
     """ Get topic labels for all training samples 
     (both from  df_di and loaded feature matrix)
@@ -159,9 +177,16 @@ def get_perc_best_topic_idx(df_tpc,df_di, perc_best_topic, classes, hl_flag):
         t_i = df_di[(df_di.Topic.isin(topics)) & 
                     (df_di.Class == class_num)].index
         last_topic = df_a.Topic.iloc[len(df_topics)]
-        best_topics = np.concatenate((np.array(topics).reshape(1,-1),
-                                      last_topic.reshape(1,-1)), 
-                                      axis = 0).reshape(1,-1)[0]
+        
+        if len(df_topics) == 1:
+            best_topics = np.concatenate((np.array(topics).reshape(1,-1),
+                                          last_topic.reshape(1,-1)), 
+                                          axis = 0).reshape(1,-1)[0]
+        else:
+            best_topics = np.concatenate((np.array(topics).reshape(-1,1),
+                                          last_topic.reshape(1,-1)), 
+                                          axis = 0).reshape(1,-1)[0]
+            
     else:     
         t_i = np.empty(0, dtype = "int")
         last_topic = df_a.Topic.iloc[0]
@@ -180,12 +205,22 @@ def get_perc_best_topic_idx(df_tpc,df_di, perc_best_topic, classes, hl_flag):
                               ascending = False).index[:last_n_samples]
     
     # Remaining indices of last topic
-    remain_i = df_lt.sort_values("Probability", 
+    pbt_remain_i = df_lt.sort_values("Probability", 
                               ascending = False).index[last_n_samples:]
     
     # Concatenate and sort indices
-    pbt_i = np.sort(np.concatenate((t_i, l_i)))       
-    return pbt_i, remain_i, best_topics
+    pbt_i = np.sort(np.concatenate((t_i, l_i)))  
+
+    # Get other indices (all remaining indices for given class)      
+    class_remain_i = df_di[(df_di.Class == class_num) & 
+                     (df_di.Topic > -1) & 
+                     (~df_di.Topic.isin(best_topics))].index
+    
+    # Raise exception if 3 sets of indices do not equal total_freq
+    if len(pbt_i) + len(pbt_remain_i) + len(class_remain_i) != total_freq:
+        raise Exception("# indices and total_freq do not match")
+    
+    return pbt_i, pbt_remain_i, class_remain_i, best_topics
 
 #--- MAIN
 
@@ -199,10 +234,7 @@ docs = load_pickled_df(doc_path)
 y = np.array(docs.RevHiLoRating)
 # del docs  
 
-# df_out = pd.DataFrame(columns = ["RepName", "TrSplit", 
-#                                  "Estimator","TrScore", "TeScore", 
-#                                  "BestEst","CVResults"])
-        
+       
 # Load df_tpc
 df_tpc_pickle = df_tpc_path % (topic_model_name.split("All_LX_Reviews_")[1],
                                                                    tr_split)
@@ -226,36 +258,45 @@ if feats_to_keep != "All":
 tr_i, te_i = strat_split_by_rating(doc_path,tr_split)
 
 # Get perc_best_topic_indices
-pbt_i_hi, remain_i_hi, best_topics_hi = get_perc_best_topic_idx(df_tpc,
-                                                      df_di, 
-                                                      perc_best_topic, 
-                                                      y[tr_i], 
-                                                      1)
-pbt_i_lo, remain_i_lo, best_topics_lo = get_perc_best_topic_idx(df_tpc,
-                                                      df_di, 
-                                                      perc_best_topic, 
-                                                      y[tr_i], 
-                                                      0)   
+(pbt_i_hi, 
+ pbt_remain_i_hi, 
+ class_remain_i_hi, 
+ best_topics_hi) = get_perc_best_topic_idx(df_tpc,
+                                           df_di, 
+                                           perc_best_topic, 
+                                           y[tr_i], 
+                                           1)
+(pbt_i_lo, 
+ pbt_remain_i_lo, 
+ class_remain_i_lo, 
+ best_topics_lo) = get_perc_best_topic_idx(df_tpc,
+                                           df_di, 
+                                           perc_best_topic, 
+                                           y[tr_i], 
+                                           0)   
 
 """Concatenate indices for hi and low perc_best_topic, as well as 
 "remaining" indices from the last_label (to hold out later)"""
 pbt_i = np.concatenate((pbt_i_hi, pbt_i_lo))
-remain_i = np.concatenate((remain_i_hi, remain_i_lo))
 
-# Get all indices not in pbt_i or remain_i to draw permutations from
-perm_i_pool = np.setdiff1d(np.setdiff1d(np.arange(len(tr_i)), remain_i), 
-                                       pbt_i)
-
-# Generate list of permutations, prepend pbt_i as the first
+"""Generate list of permutations class balanced permutations
+e.g. if perc_best_topic = 10%, then 10% of samples from each class
+that are not in pbt_i hi or lo
+Prepend perm_list with pbt_i"""
 rng = np.random.default_rng(42)
-perm_list = [rng.permutation(perm_i_pool)[:len(pbt_i)] 
+perm_list = [np.concatenate((
+             rng.permutation(class_remain_i_hi)[:len(pbt_i_hi)], 
+             rng.permutation(class_remain_i_lo)[:len(pbt_i_lo)]))             
              for i in np.arange(n_perm)]
 perm_list = [pbt_i] + perm_list
 
+#--- Permutations
+df_out = pd.DataFrame(columns = ["TrainScore", "TestScore"])
 for p_i, p in enumerate(perm_list):
+    tic = time.time()
 
     #--- Slicing
-    """ Slice train and test indices 
+    """ Slice train and test indices, 
     now X_train indices are compatible with perm_list indices
     """
     X_train = X[tr_i,:]
@@ -263,7 +304,7 @@ for p_i, p in enumerate(perm_list):
     y_train = y[tr_i]
     y_test = y[te_i]
     
-    # Remove perm indices from training
+    # Remove perm indices from training X,y
     X_train = np.delete(X_train,p,axis = 0)
     y_train = np.delete(y_train,p)
     
@@ -273,73 +314,56 @@ for p_i, p in enumerate(perm_list):
     X_test = X_test[y_test > 0,:]
     y_test = y_test[y_test > 0] 
     
-    # DELETE STUFF HERE!!!
-    del tr_i, te_i, X        
-   
-
-# FIX BELOW!!!!
-
-# Does perm need to be based on retaining equal proportions for the 2 classes?
-
-   
-#--- Pipe-grid-fit              
-for pp_i, (pipe, params) in enumerate(pipe_params):
-    
-    tic = time.time()
-    
-    # Tidy string names
-    m_name = m.split("_")[3].capitalize()  
-    e_name = str(pipe.get_params("clf")["clf"]).split("(")[0]
-
     # Strat k fold (outer CV for train data)
     skf = StratifiedKFold(n_splits= cv_folds, 
                           random_state = 42, 
-                          shuffle = True).split(X_train, y_train)
+                          shuffle = True)
     
-   
-    # Grid search
-    grid = GridSearchCV(pipe, params, cv=skf,
-                        scoring = mod_eval_metric).fit(X_train, 
-                                                          y_train)
-                                                       
-   
-    # Get (best) train and test score
-    train_score = grid.score(X_train, y_train)
-    test_score = grid.score(X_test, y_test)    
-    
-    # Assign train and test scores
-    new_row = [m_name, ts, e_name,
-               train_score, test_score,
-               grid.best_estimator_,
-               grid.cv_results_]
-    df_out.loc[len(df_out)] = new_row
+    # # Grid search
+    # grid = GridSearchCV(pipe, params, cv=skf,
+    #                     scoring = mod_eval_metric).fit(X_train, 
+    #                                                    y_train)    
+    # # Get (best) train and test score
+    # train_score = grid.score(X_train, y_train)
+    # test_score = grid.score(X_test, y_test) 
 
-    print("Model: %s tr_split_%i %s" 
-          % (m_name,ts,e_name))
-    print(("Time elapsed: %1.1f, best train score: %1.4f, " +
-          "best test score: %1.4f") 
-          % (time.time() - tic, train_score, test_score))
-                    
+    # Classifier, get scores
+    pipe.fit(X_train, y_train) 
+    train_score = pipe.score(X_train, y_train)
+    test_score = pipe.score(X_test, y_test)    
+    
+    # Assign
+    df_out.loc[len(df_out)] = [train_score, test_score]
+    
+    if p_i % 10 == 0:     
+        print(("Perm %i time elapsed: %1.1f, train score: %1.4f, " +
+              "test score: %1.4f") 
+              % (p_i, time.time() - tic, train_score, test_score))
 #Pickle
-out_name = "GridMultiModel_Class_%s.pickle" % (str(time.time()).replace(".","_"))
+out_name = "Perm_HiLo_PBT_%i_%s.pickle" % (perc_best_topic, 
+                                           str(time.time()).replace(".","_"))
 pickle_path = os.path.join(output_path,out_name)
 with open(pickle_path,"wb") as f:
     pickle.dump(df_out, f)
+    
+# plot
 
-# Plot
-x_labels = ["%s %s TS: %i" % 
-            (df_out.loc[i].RepName,
-             df_out.loc[i].Estimator,
-            df_out.loc[i].TrSplit)            
-            for i in np.arange(len(df_out))]
+#--- Calculate and assign stats
+p_val = 1 - ((np.sum(df_out.TestScore >= df_out.TestScore[0]) + 1)
+             / (n_perm + 1))
 
-fig, ax = plt.subplots(figsize=(8,5), dpi = 300)
+title = ("%s %s: %i%% sample removal (%i perms)" %
+        (topic_model_name.split("All_LX_Reviews_")[1].split("_")[0],
+        rep_model.split("All_LX_Review_Embeddings_")[1],
+        perc_best_topic,
+        n_perm))
 
-ax.plot(np.arange(len(df_out)), "TrScore", data = df_out, c = "blue")
-ax.plot(np.arange(len(df_out)), "TeScore", data = df_out, c = "red")
+fig, ax = plt.subplots()
+ax.hist(df_out.TestScore.loc[1:], bins = 50)
+ax.axvline(df_out.TestScore[0], color = "r")
+ax.set_xlabel("Perm. Score")
+ax.set_ylabel("Count")
+ax.text(df_out.TestScore[0],ax.get_ylim()[1] - 5,"%1.4f" % p_val)
+ax.set_title(title)
 
-ax.set_xticks(np.arange(len(df_out)),
-                        labels = x_labels, rotation = 90)
-ax.set_ylabel(mod_eval_metric)
-ax.legend(labels = ["Train", "Test"])
-
+ 

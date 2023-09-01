@@ -27,10 +27,10 @@ doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
             "Review_Data.pickle")
 
 tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
-              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_50")
+              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_75")
 
-tr_split = 50
-reduc_mod_sizes = [150, 100, 50]
+tr_split = 75
+reduc_mod_sizes = [90, 80, 70, 60]
 
 #--- MAIN
 
@@ -39,10 +39,7 @@ if os.path.isdir(output_path) == False:
     os.mkdir(output_path)
     
 # Get strat split training indices
-if tr_split == 75:
-    tr_i, te_i = strat_split_by_rating_75(doc_path)
-elif tr_split == 50:
-    tr_i, te_i = strat_split_by_rating_50(doc_path)
+tr_i, te_i = strat_split_by_rating(doc_path,tr_split)
 
 # Load docs, embeddings
 docs = load_pickled_df(doc_path)
