@@ -1,7 +1,7 @@
 """Uses grid search to find best classification model, 
 for different input topic rep_models
 Version C is binary HiLow classification
-E = embeddings
+P = probmat embeddings
 Perm = permutations where a specified percentage of samples from each
 class are removed (e.g. perc_best_topics = 10 = 10%): for the first "test"
 permutation, these indices are the hypothesized "best samples" that belong to 
@@ -40,9 +40,9 @@ from Functions.dataformatting import *
 
 main_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/"
 
-# feat_path = (main_path + "%s_%s_ProbMat.npy")
-feat_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/Embeddings/" +
-             "%s.npy")
+feat_path = (main_path + "%s_%s_ProbMat.npy")
+# feat_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/Embeddings/" +
+#              "%s.npy")
 
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
             "Review_Data.pickle")
@@ -59,10 +59,10 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Classification/Perm/")
 #               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
 # Test parameters
-rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2_UMAP_5"
-rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
+# rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2_UMAP_5"
+# rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
 
-topic_model_name = "All_LX_Reviews_standard_all-MiniLM-L6-v2"
+topic_model_name = "All_LX_Reviews_keybert_all-MiniLM-L6-v2"
 
 tr_split = 75
 
@@ -77,6 +77,7 @@ n_perm = 50
 
 perc_best_topic = 20 # percentage of best topics to remove
 
+
 # pipe
 
 pipe = Pipeline([
@@ -85,53 +86,10 @@ pipe = Pipeline([
                                          random_state = 42))
               ])
 
-# Pipe and parameters to search over
-# pipe_params = [(Pipeline([
-#         ('scaler', StandardScaler()),
-#         ('clf', LogisticRegression(max_iter = 300, random_state = 42))
-#         ]),
-#         {"scaler": [StandardScaler(), Normalizer()],
-#           # "clf__class_weight": ["balanced", None]
-#           "clf__class_weight": [None]},
-#         )]
-
-# pipe_params = [(Pipeline([
-#         ('scaler', StandardScaler()),
-#         ('clf', RandomForestClassifier(max_samples = 0.5, n_jobs = 8, 
-#                                         random_state = 42))
-#         ]),
-#         {"scaler": [StandardScaler(), Normalizer()],
-#           # "clf__class_weight": ["balanced", None]
-#           "clf__n_estimators": [50, 200],
-#           "clf__min_samples_split": [5, 10, 20]},
-#         )]
-
 #--- MAIN
 
 #--- Functions 
     
-def non_outlier_idx(all_tr_path, X_train, all_te_path, X_test):
-    
-    """ Get topic labels for all training samples 
-    (both from  df_di and loaded feature matrix)
-    Get indices of non-outlying rows (where topic labels
-    are the same for both"""
-    with open(all_tr_path,"rb") as f:
-        _ = pickle.load(f)
-        all_topics_tr = pickle.load(f)
-    all_topics_tr = all_topics_tr.Topic
-    X_topics_tr = np.argmax(X_train, axis = 1)
-    no_idx_tr = np.where((X_topics_tr - all_topics_tr) == 0)[0]
-
-    
-    """ As above but with test samples
-    """
-    all_topics_te = np.load(all_te_path)
-    X_topics_te = np.argmax(X_test, axis = 1)
-    no_idx_te = np.where((X_topics_te - all_topics_te) == 0)[0]
-
-    return no_idx_tr, no_idx_te
-
 def get_perc_best_topic_idx(df_tpc,df_di, perc_best_topic, classes, hl_flag):
     """ Get the indices (of samples in df_di) for desired percentage (e.g. 10%) 
     of samples that are most likely to belong to topics by a given rule
@@ -233,7 +191,6 @@ if os.path.isdir(output_path) == False:
 docs = load_pickled_df(doc_path) 
 y = np.array(docs.RevHiLoRating)
 # del docs  
-
        
 # Load df_tpc
 df_tpc_pickle = df_tpc_path % (topic_model_name.split("All_LX_Reviews_")[1],
@@ -244,17 +201,24 @@ df_tpc = load_pickled_df(df_tpc_pickle)
 df_di_pickle = df_di_path % (topic_model_name, tr_split)
 with open(df_di_pickle,"rb") as f:
     _ = pickle.load(f)
-    df_di = pickle.load(f)             
-
+    df_di = pickle.load(f)    
+    
 # Load feats
-X = np.load(feat_path % rep_model)
+X_tr_main = np.load(feat_path % (topic_model_name, 
+                                ("Train_%i" % 
+                                 tr_split))).astype("float32")
+X_te_main = np.load(feat_path % (topic_model_name, 
+                                ("Test_%i" % 
+                                (100 - tr_split)))).astype("float32")
 
+# Slice feats to keep
 if feats_to_keep != "All":
-    X = X[:,feats_to_keep]
-       
+    X_tr_main = X_tr_main[:,feats_to_keep]
+    X_te_main = X_te_main[:,feats_to_keep]
+    
 #--- Slice train and test
 
-#Split y by train and test indices
+# Get train and test indices
 tr_i, te_i = strat_split_by_rating(doc_path,tr_split)
 
 # Get perc_best_topic_indices
@@ -299,8 +263,8 @@ for p_i, p in enumerate(perm_list):
     """ Slice train and test indices, 
     now X_train indices are compatible with perm_list indices
     """
-    X_train = X[tr_i,:]
-    X_test = X[te_i,:]
+    X_train = np.copy(X_tr_main)
+    X_test = np.copy(X_te_main)
     y_train = y[tr_i]
     y_test = y[te_i]
     
@@ -319,14 +283,6 @@ for p_i, p in enumerate(perm_list):
                           random_state = 42, 
                           shuffle = True)
     
-    # # Grid search
-    # grid = GridSearchCV(pipe, params, cv=skf,
-    #                     scoring = mod_eval_metric).fit(X_train, 
-    #                                                    y_train)    
-    # # Get (best) train and test score
-    # train_score = grid.score(X_train, y_train)
-    # test_score = grid.score(X_test, y_test) 
-
     # Classifier, get scores
     pipe.fit(X_train, y_train) 
     # train_score = pipe.score(X_train, y_train)
@@ -335,7 +291,7 @@ for p_i, p in enumerate(perm_list):
     # 
     train_score = balanced_accuracy_score(y_train, pipe.predict(X_train))
     test_score = balanced_accuracy_score(y_test, pipe.predict(X_test))
-    # a = multilabel_confusion_matrix(y_test, pipe.predict(X_test)) 
+    # a = multilabel_confusion_matrix(y_test, pipe.predict(X_test))
     
     # Assign
     df_out.loc[len(df_out)] = [train_score, test_score]
@@ -354,12 +310,12 @@ with open(pickle_path,"wb") as f:
 # plot
 
 #--- Calculate and assign stats
-p_val = 1 - ((np.sum(df_out.TestScore >= df_out.TestScore[0]) + 1)
-             / (n_perm + 1))
+C = np.sum(df_out.TestScore[1:] >= df_out.TestScore[0])
+p_val = 1 - (C + 1) / (n_perm + 1)    
 
 title = ("%s %s: %i%% sample removal (%i perms)" %
         (topic_model_name.split("All_LX_Reviews_")[1].split("_")[0],
-        rep_model.split("All_LX_Review_Embeddings_")[1],
+        topic_model_name.split("All_LX_Reviews_")[1],
         perc_best_topic,
         n_perm))
 
