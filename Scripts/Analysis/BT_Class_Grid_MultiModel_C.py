@@ -42,11 +42,15 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/RegressionModelling/")
 rep_models = ["All_LX_Reviews_standard_all-MiniLM-L6-v2",
           "All_LX_Reviews_keybert_all-MiniLM-L6-v2"]
 
-rep_models = ["All_LX_Reviews_keybert_all-MiniLM-L6-v2"]
+rep_models = ["All_LX_Reviews_standard_all-MiniLM-L6-v2"]
 
 tr_splits = [50, 75]
 
 rc_vals = [0, 100, 150] # zero skips, else take k clusters
+
+tr_splits = [75]
+
+rc_vals = [0] # zero skips, else take k clusters
 
 feats_to_keep = np.arange(50) # "All" or np.array of indices
 feats_to_keep = "All"
@@ -56,28 +60,30 @@ mod_eval_metric = "balanced_accuracy"
 cv_folds = 10
 
 # Flags
-remove_outliers = 1
+remove_outliers = 0
 softmax_feats = 0
 
-# Pipe and parameters to search over
-# pipe_params = [(Pipeline([
-#         ('scaler', StandardScaler()),
-#         ('clf', LogisticRegression(max_iter = 300, random_state = 42))
-#         ]),
-#         {"scaler": [StandardScaler(), Normalizer()],
-#           # "clf__class_weight": ["balanced", None]
-#           "clf__class_weight": [None]},
-#         )]
-
+#Pipe and parameters to search over
 pipe_params = [(Pipeline([
         ('scaler', StandardScaler()),
-        ('clf', RandomForestClassifier(max_samples = 0.5, n_jobs = 8, random_state = 42))
+        ('clf', LogisticRegression(max_iter = 300, random_state = 42))
         ]),
         {"scaler": [StandardScaler(), Normalizer()],
           # "clf__class_weight": ["balanced", None]
-          "clf__n_estimators": [50, 200],
-          "clf__min_samples_split": [5, 10, 20]},
+          "clf__class_weight": [None]},
         )]
+
+
+
+# pipe_params = [(Pipeline([
+#         ('scaler', StandardScaler()),
+#         ('clf', RandomForestClassifier(max_samples = 0.5, n_jobs = 8, random_state = 42))
+#         ]),
+#         {"scaler": [StandardScaler(), Normalizer()],
+#           # "clf__class_weight": ["balanced", None]
+#           "clf__n_estimators": [50, 200],
+#           "clf__min_samples_split": [5, 10, 20]},
+#         )]
 
 #--- MAIN
 
