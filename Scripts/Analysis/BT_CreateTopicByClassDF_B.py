@@ -11,18 +11,23 @@ scripts_path = "/home/jon/GitRepos/LX_Restaurants/Scripts/"
 sys.path.append(scripts_path)
 from Functions.dataformatting import *
 
-output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/"
+output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/ByClass/" + 
+               "NonStoch/")
 output_name_stem = "All_LX_Reviews_ByClass"
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" + 
             "Review_Data.pickle")
 tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s")
 
-tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
-              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s" +
-              "_Reduc_60_Clusters")
+tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/NonStoch/" +
+              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s")
 
-tr_split = 75
+
+# tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
+#               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s" +
+#               "_Reduc_60_Clusters")
+
+tr_split = 50
 
 
 #--- MAIN
