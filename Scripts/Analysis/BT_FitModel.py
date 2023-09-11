@@ -22,7 +22,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 import plotly.io as io
 io.renderers.default='browser'
 
-output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/"
+output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/NonStoch/"
 output_name_stem = "All_LX_Reviews"
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" + 
             "Review_Data.pickle")
