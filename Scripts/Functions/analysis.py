@@ -11,15 +11,23 @@ from bertopic.representation import KeyBERTInspired
 from bertopic.representation import OpenAI
 from bertopic.representation import TextGeneration
 from transformers import pipeline
+from umap import UMAP
+
 
 def std_model(docs, embeddings, output_name_stem):
+    
+    # default with random_state = 42
+    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, 
+                      metric='cosine', random_state=42)
+    
     """ Standard model with frequent words removed """
     tic = time.time()
     vectorizer_model = CountVectorizer(stop_words="english")
 
     topic_model = BERTopic(calculate_probabilities= True, 
                            vectorizer_model=vectorizer_model,
-                           embedding_model= "all-MiniLM-L6-v2").fit(
+                           embedding_model= "all-MiniLM-L6-v2",
+                           umap_model=umap_model).fit(
                                docs,
                                embeddings)
                               
@@ -28,6 +36,11 @@ def std_model(docs, embeddings, output_name_stem):
     return topic_model, save_name
 
 def non_std_model(docs, embeddings, model_name, output_name_stem):
+    
+    # default with random_state = 42
+    umap_model = UMAP(n_neighbors=15, n_components=5, min_dist=0.0, 
+                      metric='cosine', random_state=42)
+    
     """ Select one of 4 hard-coded models """
     if model_name == "chatgpt":
         prompt = """
@@ -60,7 +73,8 @@ def non_std_model(docs, embeddings, model_name, output_name_stem):
     tic = time.time()
     topic_model = BERTopic(calculate_probabilities= True, 
                   representation_model= representation_model, 
-                  embedding_model= "all-MiniLM-L6-v2").fit(
+                  embedding_model= "all-MiniLM-L6-v2",
+                  umap_model=umap_model).fit(
                       docs,
                       embeddings)
                       
