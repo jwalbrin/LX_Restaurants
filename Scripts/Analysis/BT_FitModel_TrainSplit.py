@@ -23,25 +23,22 @@ from sklearn.feature_extraction.text import CountVectorizer
 import plotly.io as io
 io.renderers.default='browser'
 
-output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/"
+output_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/NonStoch/"
 output_name_stem = "All_LX_Reviews"
 doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" + 
             "Review_Data.pickle")
 embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
-model_names = ["standard", "keybert"] # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
+model_names = ["standard"] # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 
-tr_splits = [50, 75] # 75, 50
+tr_splits = [75] # 75, 50
 
 trans_test = 1
 
-rc_vals = [0, 50, 75, 100, 125, 150] # zero skips, else take k clusters
-rc_vals = [0, 100, 150] # zero skips, else take k clusters
+rc_vals = [0] # zero skips, else take k clusters
 
 #--- MAIN
-
-#--- Functions
 
 # Make out_path
 if os.path.isdir(output_path) == False:
