@@ -72,6 +72,15 @@ pipe_params = [(Pipeline([
           "clf__class_weight": [None]},
         )]
 
+pipe_params = [(Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', LogisticRegression(max_iter = 300, random_state = 42))
+        ]),
+        {"scaler": [StandardScaler()],
+          # "clf__class_weight": ["balanced", None]
+          "clf__class_weight": [None]},
+        )]
+
 # pipe_params = [(Pipeline([
 #         ('scaler', StandardScaler()),
 #         ('clf', RandomForestClassifier(max_samples = 0.5, n_jobs = 8, 

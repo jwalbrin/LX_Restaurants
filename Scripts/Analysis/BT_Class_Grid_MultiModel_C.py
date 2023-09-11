@@ -64,13 +64,23 @@ remove_outliers = 0
 softmax_feats = 0
 
 #Pipe and parameters to search over
+# pipe_params = [(Pipeline([
+#         ('scaler', StandardScaler()),
+#         ('clf', LogisticRegression(max_iter = 300, random_state = 42))
+#         ]),
+#         {"scaler": [StandardScaler(), Normalizer()],
+#           # "clf__class_weight": ["balanced", None]
+#           "clf__class_weight": [None]},
+#         )]
+
 pipe_params = [(Pipeline([
         ('scaler', StandardScaler()),
-        ('clf', LogisticRegression(max_iter = 300, random_state = 42))
+        ('clf', LogisticRegression(max_iter = 1000, random_state = 42,
+                                   n_jobs=12))
         ]),
-        {"scaler": [StandardScaler(), Normalizer()],
-          # "clf__class_weight": ["balanced", None]
-          "clf__class_weight": [None]},
+        {"clf__C": [0.25, 0.5, 0.75, 1.0],
+         # "clf__solver": ["lbfgs","saga"]
+         "clf__solver": ["saga","lbfgs"]},
         )]
 
 

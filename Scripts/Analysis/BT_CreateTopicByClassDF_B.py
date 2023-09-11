@@ -27,7 +27,7 @@ tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/NonStoch/" +
 #               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s" +
 #               "_Reduc_60_Clusters")
 
-tr_split = 50
+tr_split = 75
 
 
 #--- MAIN

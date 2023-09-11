@@ -31,6 +31,7 @@ embed_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "Embeddings/All_LX_Review_Embeddings_all-MiniLM-L6-v2.npy")
 
 model_names = ["standard"] # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
+model_names = ["chatgpt"] # "standard", "chatgpt", "flan-t5","gpt2", "keybert"
 
 tr_splits = [75] # 75, 50
 

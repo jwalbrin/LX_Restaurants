@@ -62,7 +62,7 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Classification/Perm/")
 # rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2_UMAP_5"
 # rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
 
-topic_model_name = "All_LX_Reviews_keybert_all-MiniLM-L6-v2"
+topic_model_name = "All_LX_Reviews_standard_all-MiniLM-L6-v2"
 
 tr_split = 75
 
