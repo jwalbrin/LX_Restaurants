@@ -20,7 +20,7 @@ tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +
               "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s")
 
 tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/NonStoch/" +
-              "All_LX_Reviews_standard_all-MiniLM-L6-v2_Train_%s")
+              "All_LX_Reviews_chatgpt_all-MiniLM-L6-v2_Train_%s")
 
 
 # tm_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/" +

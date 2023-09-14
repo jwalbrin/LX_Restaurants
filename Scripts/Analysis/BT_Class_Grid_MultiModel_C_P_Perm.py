@@ -40,7 +40,7 @@ from Functions.dataformatting import *
 
 main_path = "/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/"
 
-feat_path = (main_path + "%s_%s_ProbMat.npy")
+feat_path = (main_path + "NonStoch/" + "%s_%s_ProbMat.npy")
 # feat_path = ("/home/jon/GitRepos/LX_Restaurants/Output/BertTopic/Embeddings/" +
 #              "%s.npy")
 
@@ -48,9 +48,9 @@ doc_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Formatted/" +
             "Review_Data.pickle")
 
 df_tpc_path = (main_path + 
-               "ByClass/All_LX_Reviews_ByClass_%s_Train_%i.pickle")
+               "ByClass/NonStoch/All_LX_Reviews_ByClass_%s_Train_%i.pickle")
 
-df_di_path = (main_path + 
+df_di_path = (main_path + "NonStoch/" +
                "%s_Train_%i_Info.pickle")
 
 output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Classification/Perm/")
@@ -63,6 +63,7 @@ output_path = ("/home/jon/GitRepos/LX_Restaurants/Output/Classification/Perm/")
 # rep_model = "All_LX_Review_Embeddings_all-MiniLM-L6-v2"
 
 topic_model_name = "All_LX_Reviews_standard_all-MiniLM-L6-v2"
+
 
 tr_split = 75
 

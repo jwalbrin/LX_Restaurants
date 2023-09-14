@@ -73,27 +73,35 @@ softmax_feats = 0
 #           "clf__class_weight": [None]},
 #         )]
 
-pipe_params = [(Pipeline([
-        ('scaler', StandardScaler()),
-        ('clf', LogisticRegression(max_iter = 1000, random_state = 42,
-                                   n_jobs=12))
-        ]),
-        {"clf__C": [0.25, 0.5, 0.75, 1.0],
-         # "clf__solver": ["lbfgs","saga"]
-         "clf__solver": ["saga","lbfgs"]},
-        )]
-
-
+# Pipe and parameters to search over
+# pipe_params = [(Pipeline([
+#         ('scaler', StandardScaler()),
+#         ('clf', LogisticRegression(max_iter = 500, random_state = 42,
+#                                    solver = "liblinear"))
+#         ]),
+#         {"clf__penalty": ["l1", "elasticnet"]},
+#         )]
 
 # pipe_params = [(Pipeline([
 #         ('scaler', StandardScaler()),
-#         ('clf', RandomForestClassifier(max_samples = 0.5, n_jobs = 8, random_state = 42))
+#         ('clf', LogisticRegression(max_iter = 1000, random_state = 42,
+#                                    n_jobs=12))
 #         ]),
-#         {"scaler": [StandardScaler(), Normalizer()],
-#           # "clf__class_weight": ["balanced", None]
-#           "clf__n_estimators": [50, 200],
-#           "clf__min_samples_split": [5, 10, 20]},
+#         {"clf__C": [0.25, 0.5, 0.75, 1.0],
+#          # "clf__solver": ["lbfgs","saga"]
+#          "clf__solver": ["saga","lbfgs"]},
 #         )]
+
+
+
+pipe_params = [(Pipeline([
+        ('scaler', StandardScaler()),
+        ('clf', RandomForestClassifier(n_jobs = 12, random_state = 42))
+        ]),
+        {"clf__n_estimators": [50, 100, 400],
+          "clf__min_samples_split": [5, 10, 20],
+          "clf__max_samples": [0.1,0.25, 0.5]},
+        )]
 
 #--- MAIN
 
